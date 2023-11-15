@@ -587,6 +587,8 @@ export class Editor extends EventEmitter<TLEventMap> {
     // @internal (undocumented)
     capturedPointerId: null | number;
     centerOnPoint(point: VecLike, animation?: TLAnimationOptions): this;
+    // (undocumented)
+    clearTextInjectionSites(): void;
     // @internal
     protected _clickManager: ClickManager;
     complete(): this;
@@ -940,6 +942,10 @@ export class Editor extends EventEmitter<TLEventMap> {
     setSelectedShapes(shapes: TLShape[] | TLShapeId[], historyOptions?: TLCommandHistoryOptions): this;
     setStyleForNextShapes<T>(style: StyleProp<T>, value: T, historyOptions?: TLCommandHistoryOptions): this;
     setStyleForSelectedShapes<T>(style: StyleProp<T>, value: T, historyOptions?: TLCommandHistoryOptions): this;
+    // (undocumented)
+    setTextInjectionSites(shape: TLShape, sites: (TLTextInjectionSite & {
+        hovered: boolean;
+    })[]): void;
     shapeUtils: {
         readonly [K in string]?: ShapeUtil<TLUnknownShape>;
     };
@@ -965,6 +971,13 @@ export class Editor extends EventEmitter<TLEventMap> {
     styleProps: {
         [key: string]: Map<StyleProp<unknown>, string>;
     };
+    // (undocumented)
+    readonly _textInjectionSites: Atom<    {
+    shape: TLShape;
+    sites: (TLTextInjectionSite & {
+    hovered: boolean;
+    })[];
+    } | null, unknown>;
     readonly textMeasure: TextManager;
     toggleLock(shapes: TLShape[] | TLShapeId[]): this;
     undo(): this;
@@ -1722,6 +1735,7 @@ export abstract class ShapeUtil<Shape extends TLUnknownShape = TLUnknownShape> {
     abstract getGeometry(shape: Shape): Geometry2d;
     getHandles?(shape: Shape): TLHandle[];
     getOutlineSegments(shape: Shape): Vec2d[][];
+    getTextInjectionSites?(shape: Shape): TLTextInjectionSite[];
     hideResizeHandles: TLShapeUtilFlag<Shape>;
     hideRotateHandle: TLShapeUtilFlag<Shape>;
     hideSelectionBoundsBg: TLShapeUtilFlag<Shape>;
@@ -2681,6 +2695,14 @@ export type TLStoreWithStatus = {
 
 // @public (undocumented)
 export type TLSvgDefsComponent = React.ComponentType;
+
+// @public (undocumented)
+export type TLTextInjectionSite = {
+    justify: 'center' | 'left' | 'right';
+    align: 'bottom' | 'center' | 'top';
+    x: number;
+    y: number;
+};
 
 // @public (undocumented)
 export type TLTickEvent = (elapsed: number) => void;

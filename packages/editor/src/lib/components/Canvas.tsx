@@ -19,6 +19,7 @@ import { GeometryDebuggingView } from './GeometryDebuggingView'
 import { LiveCollaborators } from './LiveCollaborators'
 import { Shape } from './Shape'
 import { ShapeIndicator } from './ShapeIndicator'
+import { TextInjectionSites } from './TextInjectionSites'
 
 /** @public */
 export function Canvas({ className }: { className?: string }) {
@@ -126,6 +127,7 @@ export function Canvas({ className }: { className?: string }) {
 					<SnapLinesWrapper />
 					<SelectionForegroundWrapper />
 					<LiveCollaborators />
+					<TextInjectionSites />
 				</div>
 				<InFrontOfTheCanvasWrapper />
 			</div>

@@ -1,6 +1,7 @@
 import { BaseRecord, createRecordType, defineMigrations, RecordId } from '@tldraw/store'
 import { JsonObject } from '@tldraw/utils'
 import { T } from '@tldraw/validate'
+import { ValidationError } from '@tldraw/validate/src/lib/validation'
 import { BoxModel, boxModelValidator } from '../misc/geometry-types'
 import { idValidator } from '../misc/id-validator'
 import { cursorValidator, TLCursor } from '../misc/TLCursor'
@@ -20,7 +21,7 @@ import { TLShapeId } from './TLShape'
 export interface TLInstance extends BaseRecord<'instance', TLInstanceId> {
 	currentPageId: TLPageId
 	opacityForNextShape: TLOpacityType
-	stylesForNextShape: Record<string, unknown>
+	stylesForNextShape: Record<string, Record<string, unknown>>
 	// ephemeral
 	followingUserId: string | null
 	highlightedUserIds: string[]
@@ -71,12 +72,36 @@ export type TLInstanceId = RecordId<TLInstance>
 /** @internal */
 export const instanceIdValidator = idValidator<TLInstanceId>('instance')
 
-export function createInstanceRecordType(stylesById: Map<string, StyleProp<unknown>>) {
-	const stylesForNextShapeValidators = {} as Record<string, T.Validator<unknown>>
-	for (const [id, style] of stylesById) {
-		stylesForNextShapeValidators[id] = T.optional(style)
+/** @internal */
+export const stylesForNextShapeValidator = (
+	stylesById: Map<string, Map<string, StyleProp<unknown>>>
+) => {
+	return {
+		validate: (value: unknown) => {
+			if (typeof value !== 'object' || value === null)
+				throw new ValidationError('Expected an object')
+			for (const [id, style] of Object.entries(value)) {
+				const styleById = stylesById.get(id)
+				if (!styleById) throw new ValidationError(`Style with id ${id} not found`)
+				if (typeof style !== 'object' || style === null)
+					throw new ValidationError(`Expected an object for style ${id}`)
+				for (const [shapeType, styleProp] of Object.entries(style)) {
+					const styleByIdByShapeType = styleById.get(shapeType)
+					if (!styleByIdByShapeType)
+						throw new ValidationError(`Style prop with id ${shapeType} not found`)
+					styleByIdByShapeType.validate(styleProp)
+				}
+			}
+			return value as Record<string, Record<string, unknown>>
+		},
+		// TODO: fix for now, untill https://github.com/tldraw/tldraw/pull/2897/files lands
+		validateUsingKnownGoodVersion: (prevValue: unknown, newValue: unknown) => {
+			return newValue as Record<string, Record<string, unknown>>
+		},
 	}
+}
 
+export function createInstanceRecordType(stylesById: Map<string, Map<string, StyleProp<unknown>>>) {
 	const instanceTypeValidator: T.Validator<TLInstance> = T.model(
 		'instance',
 		T.object({
@@ -86,7 +111,7 @@ export function createInstanceRecordType(stylesById: Map<string, StyleProp<unkno
 			followingUserId: T.string.nullable(),
 			brush: boxModelValidator.nullable(),
 			opacityForNextShape: opacityValidator,
-			stylesForNextShape: T.object(stylesForNextShapeValidators),
+			stylesForNextShape: stylesForNextShapeValidator(stylesById),
 			cursor: cursorValidator,
 			scribbles: T.arrayOf(scribbleValidator),
 			isFocusMode: T.boolean,

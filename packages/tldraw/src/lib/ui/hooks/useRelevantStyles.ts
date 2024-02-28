@@ -6,6 +6,7 @@ import {
 	ReadonlySharedStyleMap,
 	SharedStyleMap,
 	StyleProp,
+	debugFlags,
 	useEditor,
 	useValue,
 } from '@tldraw/editor'
@@ -27,9 +28,15 @@ export function useRelevantStyles(stylesToCheck = selectToolStyles): ReadonlySha
 			const isInShapeSpecificTool = !!editor.root.getCurrent()?.shapeType
 			const hasShapesSelected = editor.isIn('select') && editor.getSelectedShapeIds().length > 0
 
-			if (styles.size === 0 && editor.isIn('select') && editor.getSelectedShapeIds().length === 0) {
+			const hideStylePanel = debugFlags.hideStylePanel.get()
+			if (
+				styles.size === 0 &&
+				editor.isIn('select') &&
+				editor.getSelectedShapeIds().length === 0 &&
+				!hideStylePanel
+			) {
 				for (const style of stylesToCheck) {
-					styles.applyValue(style, editor.getStyleForNextShape(style))
+					styles.applyValue(style, style.defaultValue)
 				}
 			}
 
@@ -44,6 +51,6 @@ export function useRelevantStyles(stylesToCheck = selectToolStyles): ReadonlySha
 
 			return null
 		},
-		[editor]
+		[editor, debugFlags]
 	)
 }

@@ -6604,7 +6604,7 @@ export class Editor extends EventEmitter<TLEventMap> {
 					// We then look up each key in the tab state's styles; and if it's there,
 					// we use the value from the tab state's styles instead of the default.
 					for (const [style, propKey] of this.styleProps[partial.type]) {
-						;(initialProps as any)[propKey] = this.getStyleForNextShape(style)
+						;(initialProps as any)[propKey] = this.getStyleForNextShape(style, partial.type)
 					}
 
 					// When we create the shape, take in the partial (the props coming into the
@@ -7182,9 +7182,16 @@ export class Editor extends EventEmitter<TLEventMap> {
 	}
 
 	/** @internal */
-	getStyleForNextShape<T>(style: StyleProp<T>): T {
+	getStyleForNextShape<T>(style: StyleProp<T>, shapeType: string): T {
 		const value = this.getInstanceState().stylesForNextShape[style.id]
-		return value === undefined ? style.defaultValue : (value as T)
+		if (value === undefined) {
+			return style.defaultValue
+		}
+		const result = value[shapeType]
+		if (result === undefined) {
+			return style.defaultValue
+		}
+		return result as T
 	}
 
 	getShapeStyleIfExists<T>(shape: TLShape, style: StyleProp<T>): T | undefined {
@@ -7224,7 +7231,7 @@ export class Editor extends EventEmitter<TLEventMap> {
 
 		if (currentTool.shapeType) {
 			for (const style of this.styleProps[currentTool.shapeType].keys()) {
-				styles.applyValue(style, this.getStyleForNextShape(style))
+				styles.applyValue(style, this.getStyleForNextShape(style, currentTool.shapeType))
 			}
 		}
 
@@ -7361,12 +7368,33 @@ export class Editor extends EventEmitter<TLEventMap> {
 		historyOptions?: TLCommandHistoryOptions
 	): this {
 		const stylesForNextShape = this.getInstanceState().stylesForNextShape
-
+		const selectedShapeTypes = this.getSelectedShapes().map((shape) => shape.type)
+		const newStyleForId = deepCopy(stylesForNextShape[style.id]) ?? {}
+		const tool = this.getCurrentTool()
+		if (tool.shapeType) {
+			// We have a shape tool, so we will update the style for that shape type
+			newStyleForId[tool.shapeType] = value
+		} else if (selectedShapeTypes.length !== 0) {
+			// We have selected shapes, so we will update the style for those shapes
+			for (const selectedShapeType of selectedShapeTypes) {
+				const shapeStyles = this.styleProps[selectedShapeType]
+				// If the shape type doesn't support this style then skip the update
+				if (!shapeStyles.has(style)) {
+					continue
+				}
+				newStyleForId[selectedShapeType] = value
+			}
+		} else {
+			// We don't have anything to update
+			return this
+		}
 		this.updateInstanceState(
-			{ stylesForNextShape: { ...stylesForNextShape, [style.id]: value } },
+			{
+				stylesForNextShape: { ...stylesForNextShape, [style.id]: newStyleForId },
+			},
+
 			historyOptions
 		)
-
 		return this
 	}
 

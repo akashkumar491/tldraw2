@@ -26,10 +26,7 @@ export class Idle extends StateNode {
 	override onEnter = () => {
 		this.parent.setCurrentToolIdMask(undefined)
 		updateHoveredId(this.editor)
-		this.editor.updateInstanceState(
-			{ cursor: { type: 'default', rotation: 0 } },
-			{ ephemeral: true }
-		)
+		this.editor.setCursor({ type: 'default', rotation: 0 })
 	}
 
 	override onPointerMove: TLEventHandlers['onPointerMove'] = () => {
@@ -111,7 +108,11 @@ export class Idle extends StateNode {
 				if (this.editor.inputs.altKey) {
 					this.parent.transition('pointing_shape', info)
 				} else {
-					this.parent.transition('pointing_handle', info)
+					if (this.editor.isShapeOfType<TLArrowShape>(info.shape, 'arrow')) {
+						this.parent.transition('pointing_arrow_handle', info)
+					} else {
+						this.parent.transition('pointing_handle', info)
+					}
 				}
 				break
 			}
@@ -266,7 +267,7 @@ export class Idle extends StateNode {
 						util.canCrop(onlySelectedShape) &&
 						!this.editor.isShapeOrAncestorLocked(onlySelectedShape)
 					) {
-						this.parent.transition('crop', info)
+						this.parent.transition('cropping', info)
 						return
 					}
 
@@ -298,7 +299,7 @@ export class Idle extends StateNode {
 						// crop on double click
 						this.editor.mark('select and crop')
 						this.editor.select(info.shape?.id)
-						this.parent.transition('crop', info)
+						this.parent.transition('cropping', info)
 						return
 					}
 				}
@@ -463,7 +464,7 @@ export class Idle extends StateNode {
 
 				// If the only selected shape is croppable, then begin cropping it
 				if (getShouldEnterCropMode(this.editor)) {
-					this.parent.transition('crop', info)
+					this.parent.transition('cropping', info)
 				}
 				break
 			}

@@ -280,7 +280,7 @@ export class ImageShapeUtil extends BaseBoxShapeUtil<TLImageShape> {
 			},
 		}
 
-		this.editor.updateShapes([partial])
+		return partial
 	}
 }
 

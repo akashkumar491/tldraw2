@@ -7,7 +7,6 @@
 /// <reference types="react" />
 
 import { ArrayOfValidator } from '@tldraw/editor';
-import { BaseBoxShapeTool } from '@tldraw/editor';
 import { BaseBoxShapeUtil } from '@tldraw/editor';
 import { BoundsSnapPoint } from '@tldraw/editor';
 import { Box } from '@tldraw/editor';
@@ -24,10 +23,10 @@ import { Geometry2d } from '@tldraw/editor';
 import { Group2d } from '@tldraw/editor';
 import { HandleSnapGeometry } from '@tldraw/editor';
 import { IndexKey } from '@tldraw/editor';
+import { Interaction } from '@tldraw/editor';
 import { JsonObject } from '@tldraw/editor';
 import { JSX as JSX_2 } from 'react/jsx-runtime';
 import { LANGUAGES } from '@tldraw/editor';
-import { Mat } from '@tldraw/editor';
 import { MatModel } from '@tldraw/editor';
 import { MemoExoticComponent } from 'react';
 import { MigrationFailureReason } from '@tldraw/editor';
@@ -43,8 +42,7 @@ import { ReadonlySharedStyleMap } from '@tldraw/editor';
 import { Rectangle2d } from '@tldraw/editor';
 import { RecursivePartial } from '@tldraw/editor';
 import { Result } from '@tldraw/editor';
-import { SelectionCorner } from '@tldraw/editor';
-import { SelectionEdge } from '@tldraw/editor';
+import { RotateCorner } from '@tldraw/editor';
 import { SelectionHandle } from '@tldraw/editor';
 import { SerializedSchema } from '@tldraw/editor';
 import { ShapeUtil } from '@tldraw/editor';
@@ -59,7 +57,6 @@ import { TLArrowShape } from '@tldraw/editor';
 import { TLAssetId } from '@tldraw/editor';
 import { TLBaseEventInfo } from '@tldraw/editor';
 import { TLBookmarkShape } from '@tldraw/editor';
-import { TLCancelEvent } from '@tldraw/editor';
 import { TLClickEvent } from '@tldraw/editor';
 import { TLClickEventInfo } from '@tldraw/editor';
 import { TLDefaultColorTheme } from '@tldraw/editor';
@@ -71,7 +68,6 @@ import { TLEditorComponents } from '@tldraw/editor';
 import { TLEmbedShape } from '@tldraw/editor';
 import { TLEnterEventHandler } from '@tldraw/editor';
 import { TLEventHandlers } from '@tldraw/editor';
-import { TLExitEventHandler } from '@tldraw/editor';
 import { TLFrameShape } from '@tldraw/editor';
 import { TLGeoShape } from '@tldraw/editor';
 import { TLHandle } from '@tldraw/editor';
@@ -114,7 +110,6 @@ import { TLStore } from '@tldraw/editor';
 import { TLStoreWithStatus } from '@tldraw/editor';
 import { TLSvgOptions } from '@tldraw/editor';
 import { TLTextShape } from '@tldraw/editor';
-import { TLTickEventHandler } from '@tldraw/editor';
 import { TLUnknownShape } from '@tldraw/editor';
 import { TLVideoShape } from '@tldraw/editor';
 import { UnionValidator } from '@tldraw/editor';
@@ -147,7 +142,7 @@ export function ArrowRightToolbarItem(): JSX_2.Element;
 // @public (undocumented)
 export class ArrowShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle | typeof Pointing)[];
+    static children: () => (typeof Creating_2 | typeof Idle_2 | typeof Pointing_2)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -260,6 +255,20 @@ export function AssetUrlsProvider({ assetUrls, children, }: {
     assetUrls: TLUiAssetUrls;
     children: React.ReactNode;
 }): JSX_2.Element;
+
+// @public (undocumented)
+export abstract class BaseBoxShapeTool extends StateNode {
+    // (undocumented)
+    static children: () => (typeof Creating | typeof Idle | typeof Pointing)[];
+    // (undocumented)
+    static id: string;
+    // (undocumented)
+    static initial: string;
+    // (undocumented)
+    onCreate?: (_shape: null | TLShape) => null | void;
+    // (undocumented)
+    abstract shapeType: string;
+}
 
 // @public (undocumented)
 export class BookmarkShapeUtil extends BaseBoxShapeUtil<TLBookmarkShape> {
@@ -450,7 +459,7 @@ export function downsizeImage(blob: Blob, width: number, height: number, opts?: 
 // @public (undocumented)
 export class DrawShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Drawing | typeof Idle_2)[];
+    static children: () => (typeof Drawing | typeof Idle_3)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -557,7 +566,7 @@ export class EmbedShapeUtil extends BaseBoxShapeUtil<TLEmbedShape> {
 // @public (undocumented)
 export class EraserTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Erasing | typeof Idle_7 | typeof Pointing_6)[];
+    static children: () => (typeof Erasing | typeof Idle_8 | typeof Pointing_7)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -676,7 +685,7 @@ export function FrameToolbarItem(): JSX_2.Element;
 // @public (undocumented)
 export class GeoShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle_3 | typeof Pointing_2)[];
+    static children: () => (typeof Creating_3 | typeof Idle_4 | typeof Pointing_3)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -849,7 +858,7 @@ export function GroupOrUngroupMenuItem(): JSX_2.Element;
 // @public (undocumented)
 export class HandTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Dragging | typeof Idle_8 | typeof Pointing_7)[];
+    static children: () => (typeof Dragging | typeof Idle_9 | typeof Pointing_8)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -871,7 +880,7 @@ export function HexagonToolbarItem(): JSX_2.Element;
 // @public (undocumented)
 export class HighlightShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Drawing | typeof Idle_2)[];
+    static children: () => (typeof Drawing | typeof Idle_3)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -974,7 +983,7 @@ export function LanguageMenu(): JSX_2.Element;
 // @public (undocumented)
 export class LaserTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle_9 | typeof Lasering)[];
+    static children: () => (typeof Idle_10 | typeof Lasering)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -1005,7 +1014,7 @@ export interface LegacyTldrawDocument {
 // @public (undocumented)
 export class LineShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle_4 | typeof Pointing_3)[];
+    static children: () => (typeof Creating_4 | typeof Idle_5 | typeof Pointing_4)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -1073,7 +1082,7 @@ export function MoveToPageMenu(): JSX_2.Element | null;
 // @public (undocumented)
 export class NoteShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle_5 | typeof Pointing_4)[];
+    static children: () => (typeof Creating_5 | typeof Idle_6 | typeof Pointing_5)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -1239,7 +1248,7 @@ export function SelectAllMenuItem(): JSX_2.Element;
 // @public (undocumented)
 export class SelectTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Brushing | typeof Crop | typeof Cropping | typeof DraggingHandle | typeof EditingShape | typeof Idle_11 | typeof PointingArrowLabel | typeof PointingCanvas | typeof PointingCropHandle | typeof PointingHandle | typeof PointingResizeHandle | typeof PointingRotateHandle | typeof PointingSelection | typeof PointingShape | typeof Resizing | typeof Rotating | typeof ScribbleBrushing | typeof Translating)[];
+    static children: () => (typeof Brushing | typeof Cropping | typeof EditingShape | typeof Idle_12 | typeof PointingArrowHandle | typeof PointingArrowLabel | typeof PointingCanvas | typeof PointingCropHandle_2 | typeof PointingHandle | typeof PointingResizeHandle | typeof PointingRotateHandle | typeof PointingSelection | typeof PointingShape | typeof Resizing | typeof ResizingCrop | typeof Translating)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -1284,7 +1293,7 @@ export function StarToolbarItem(): JSX_2.Element;
 // @public (undocumented)
 export class TextShapeTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle_6 | typeof Pointing_5)[];
+    static children: () => (typeof CreatingText | typeof Idle_7 | typeof Pointing_6)[];
     // (undocumented)
     static id: string;
     // (undocumented)
@@ -2590,7 +2599,7 @@ export function ZoomToFitMenuItem(): JSX_2.Element;
 // @public (undocumented)
 export class ZoomTool extends StateNode {
     // (undocumented)
-    static children: () => (typeof Idle_12 | typeof Pointing_8 | typeof ZoomBrushing)[];
+    static children: () => (typeof Idle_13 | typeof Pointing_9 | typeof ZoomBrushing)[];
     // (undocumented)
     static id: string;
     // (undocumented)

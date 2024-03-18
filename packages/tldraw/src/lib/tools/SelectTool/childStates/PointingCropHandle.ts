@@ -1,5 +1,5 @@
-import { StateNode, TLEventHandlers, TLPointerEventInfo } from '@tldraw/editor'
-import { CursorTypeMap } from './PointingResizeHandle'
+import { StateNode, TLEventHandlers, TLImageShape, TLPointerEventInfo } from '@tldraw/editor'
+import { CursorTypeMap } from '../select-helpers'
 
 type TLPointingCropHandleInfo = TLPointerEventInfo & {
 	target: 'selection'
@@ -40,9 +40,9 @@ export class PointingCropHandle extends StateNode {
 		const isDragging = this.editor.inputs.isDragging
 
 		if (isDragging) {
-			this.parent.transition('cropping', {
-				...this.info,
-				onInteractionEnd: this.info.onInteractionEnd,
+			this.parent.transition('resizing_crop', {
+				shape: this.editor.getOnlySelectedShape() as TLImageShape,
+				handle: this.info.handle,
 			})
 		}
 	}
@@ -69,6 +69,7 @@ export class PointingCropHandle extends StateNode {
 	}
 
 	private cancel() {
+		this.editor.setCroppingShape(null)
 		if (this.info.onInteractionEnd) {
 			this.editor.setCurrentTool(this.info.onInteractionEnd, this.info)
 		} else {

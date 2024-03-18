@@ -1,10 +1,9 @@
 import { StateNode, react } from '@tldraw/editor'
 import { Brushing } from './childStates/Brushing'
-import { Crop } from './childStates/Crop/Crop'
-import { Cropping } from './childStates/Cropping'
-import { DraggingHandle } from './childStates/DraggingHandle'
+import { Cropping } from './childStates/Cropping/Cropping'
 import { EditingShape } from './childStates/EditingShape'
 import { Idle } from './childStates/Idle'
+import { PointingArrowHandle } from './childStates/PointingArrowHandle'
 import { PointingArrowLabel } from './childStates/PointingArrowLabel'
 import { PointingCanvas } from './childStates/PointingCanvas'
 import { PointingCropHandle } from './childStates/PointingCropHandle'
@@ -14,8 +13,8 @@ import { PointingRotateHandle } from './childStates/PointingRotateHandle'
 import { PointingSelection } from './childStates/PointingSelection'
 import { PointingShape } from './childStates/PointingShape'
 import { Resizing } from './childStates/Resizing'
+import { ResizingCrop } from './childStates/ResizingCrop'
 import { Rotating } from './childStates/Rotating'
-import { ScribbleBrushing } from './childStates/ScribbleBrushing'
 import { Translating } from './childStates/Translating'
 
 /** @public */
@@ -25,14 +24,13 @@ export class SelectTool extends StateNode {
 	reactor: undefined | (() => void) = undefined
 
 	static override children = () => [
-		Crop,
 		Cropping,
+		ResizingCrop,
 		Idle,
 		PointingCanvas,
 		PointingShape,
 		Translating,
 		Brushing,
-		ScribbleBrushing,
 		PointingCropHandle,
 		PointingSelection,
 		PointingResizeHandle,
@@ -42,7 +40,7 @@ export class SelectTool extends StateNode {
 		PointingRotateHandle,
 		PointingArrowLabel,
 		PointingHandle,
-		DraggingHandle,
+		PointingArrowHandle,
 	]
 
 	// We want to clean up the duplicate props when the selection changes

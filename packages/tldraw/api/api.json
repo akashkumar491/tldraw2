@@ -444,8 +444,17 @@
                 },
                 {
                   "kind": "Reference",
+                  "text": "Creating",
+                  "canonicalReference": "tldraw!~Creating_2:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle:class"
+                  "canonicalReference": "tldraw!~Idle_2:class"
                 },
                 {
                   "kind": "Content",
@@ -454,7 +463,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing:class"
+                  "canonicalReference": "tldraw!~Pointing_2:class"
                 },
                 {
                   "kind": "Content",
@@ -471,7 +480,7 @@
               "name": "children",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 8
               },
               "isStatic": true,
               "isProtected": false,
@@ -1912,6 +1921,224 @@
           "overloadIndex": 1,
           "parameters": [],
           "name": "AssetToolbarItem"
+        },
+        {
+          "kind": "Class",
+          "canonicalReference": "tldraw!BaseBoxShapeTool:class",
+          "docComment": "/**\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare abstract class BaseBoxShapeTool extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "StateNode",
+              "canonicalReference": "@tldraw/editor!StateNode:class"
+            },
+            {
+              "kind": "Content",
+              "text": " "
+            }
+          ],
+          "fileUrlPath": "packages/tldraw/src/lib/shapes/box/BaseBoxShapeTool.ts",
+          "releaseTag": "Public",
+          "isAbstract": true,
+          "name": "BaseBoxShapeTool",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "Property",
+              "canonicalReference": "tldraw!BaseBoxShapeTool.children:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static children: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "() => (typeof "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Creating",
+                  "canonicalReference": "tldraw!~Creating:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Idle",
+                  "canonicalReference": "tldraw!~Idle:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Pointing",
+                  "canonicalReference": "tldraw!~Pointing:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": ")[]"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "children",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 8
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "tldraw!BaseBoxShapeTool.id:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static id: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "id",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "tldraw!BaseBoxShapeTool.initial:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "static initial: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "initial",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": true,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "tldraw!BaseBoxShapeTool#onCreate:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "onCreate?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(_shape: null | "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "TLShape",
+                  "canonicalReference": "@tldraw/tlschema!TLShape:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ") => null | void"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "onCreate",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 4
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "tldraw!BaseBoxShapeTool#shapeType:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "abstract shapeType: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "shapeType",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": true
+            }
+          ],
+          "extendsTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          },
+          "implementsTokenRanges": []
         },
         {
           "kind": "Class",
@@ -4460,7 +4687,7 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_2:class"
+                  "canonicalReference": "tldraw!~Idle_3:class"
                 },
                 {
                   "kind": "Content",
@@ -6170,7 +6397,7 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_7:class"
+                  "canonicalReference": "tldraw!~Idle_8:class"
                 },
                 {
                   "kind": "Content",
@@ -6179,7 +6406,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_6:class"
+                  "canonicalReference": "tldraw!~Pointing_7:class"
                 },
                 {
                   "kind": "Content",
@@ -6891,7 +7118,7 @@
             {
               "kind": "Reference",
               "text": "BaseBoxShapeTool",
-              "canonicalReference": "@tldraw/editor!BaseBoxShapeTool:class"
+              "canonicalReference": "tldraw!BaseBoxShapeTool:class"
             },
             {
               "kind": "Content",
@@ -7921,8 +8148,17 @@
                 },
                 {
                   "kind": "Reference",
+                  "text": "Creating",
+                  "canonicalReference": "tldraw!~Creating_3:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_3:class"
+                  "canonicalReference": "tldraw!~Idle_4:class"
                 },
                 {
                   "kind": "Content",
@@ -7931,7 +8167,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_2:class"
+                  "canonicalReference": "tldraw!~Pointing_3:class"
                 },
                 {
                   "kind": "Content",
@@ -7948,7 +8184,7 @@
               "name": "children",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 8
               },
               "isStatic": true,
               "isProtected": false,
@@ -9424,7 +9660,7 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_8:class"
+                  "canonicalReference": "tldraw!~Idle_9:class"
                 },
                 {
                   "kind": "Content",
@@ -9433,7 +9669,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_7:class"
+                  "canonicalReference": "tldraw!~Pointing_8:class"
                 },
                 {
                   "kind": "Content",
@@ -9732,7 +9968,7 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_2:class"
+                  "canonicalReference": "tldraw!~Idle_3:class"
                 },
                 {
                   "kind": "Content",
@@ -11381,7 +11617,7 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_9:class"
+                  "canonicalReference": "tldraw!~Idle_10:class"
                 },
                 {
                   "kind": "Content",
@@ -11583,8 +11819,17 @@
                 },
                 {
                   "kind": "Reference",
+                  "text": "Creating",
+                  "canonicalReference": "tldraw!~Creating_4:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_4:class"
+                  "canonicalReference": "tldraw!~Idle_5:class"
                 },
                 {
                   "kind": "Content",
@@ -11593,7 +11838,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_3:class"
+                  "canonicalReference": "tldraw!~Pointing_4:class"
                 },
                 {
                   "kind": "Content",
@@ -11610,7 +11855,7 @@
               "name": "children",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 8
               },
               "isStatic": true,
               "isProtected": false,
@@ -12636,8 +12881,17 @@
                 },
                 {
                   "kind": "Reference",
+                  "text": "Creating",
+                  "canonicalReference": "tldraw!~Creating_5:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_5:class"
+                  "canonicalReference": "tldraw!~Idle_6:class"
                 },
                 {
                   "kind": "Content",
@@ -12646,7 +12900,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_4:class"
+                  "canonicalReference": "tldraw!~Pointing_5:class"
                 },
                 {
                   "kind": "Content",
@@ -12663,7 +12917,7 @@
               "name": "children",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 8
               },
               "isStatic": true,
               "isProtected": false,
@@ -14429,26 +14683,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "Crop",
-                  "canonicalReference": "tldraw!~Crop:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": " | typeof "
-                },
-                {
-                  "kind": "Reference",
                   "text": "Cropping",
                   "canonicalReference": "tldraw!~Cropping:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": " | typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "DraggingHandle",
-                  "canonicalReference": "tldraw!~DraggingHandle:class"
                 },
                 {
                   "kind": "Content",
@@ -14466,7 +14702,16 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_11:class"
+                  "canonicalReference": "tldraw!~Idle_12:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "PointingArrowHandle",
+                  "canonicalReference": "tldraw!~PointingArrowHandle:class"
                 },
                 {
                   "kind": "Content",
@@ -14493,7 +14738,7 @@
                 {
                   "kind": "Reference",
                   "text": "PointingCropHandle",
-                  "canonicalReference": "tldraw!~PointingCropHandle:class"
+                  "canonicalReference": "tldraw!~PointingCropHandle_2:class"
                 },
                 {
                   "kind": "Content",
@@ -14555,17 +14800,8 @@
                 },
                 {
                   "kind": "Reference",
-                  "text": "Rotating",
-                  "canonicalReference": "tldraw!~Rotating:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": " | typeof "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "ScribbleBrushing",
-                  "canonicalReference": "tldraw!~ScribbleBrushing:class"
+                  "text": "ResizingCrop",
+                  "canonicalReference": "tldraw!~ResizingCrop:class"
                 },
                 {
                   "kind": "Content",
@@ -14591,7 +14827,7 @@
               "name": "children",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 38
+                "endIndex": 34
               },
               "isStatic": true,
               "isProtected": false,
@@ -15113,8 +15349,17 @@
                 },
                 {
                   "kind": "Reference",
+                  "text": "CreatingText",
+                  "canonicalReference": "tldraw!~CreatingText:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": " | typeof "
+                },
+                {
+                  "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_6:class"
+                  "canonicalReference": "tldraw!~Idle_7:class"
                 },
                 {
                   "kind": "Content",
@@ -15123,7 +15368,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_5:class"
+                  "canonicalReference": "tldraw!~Pointing_6:class"
                 },
                 {
                   "kind": "Content",
@@ -15140,7 +15385,7 @@
               "name": "children",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 6
+                "endIndex": 8
               },
               "isStatic": true,
               "isProtected": false,
@@ -28911,7 +29156,7 @@
                 {
                   "kind": "Reference",
                   "text": "Idle",
-                  "canonicalReference": "tldraw!~Idle_12:class"
+                  "canonicalReference": "tldraw!~Idle_13:class"
                 },
                 {
                   "kind": "Content",
@@ -28920,7 +29165,7 @@
                 {
                   "kind": "Reference",
                   "text": "Pointing",
-                  "canonicalReference": "tldraw!~Pointing_8:class"
+                  "canonicalReference": "tldraw!~Pointing_9:class"
                 },
                 {
                   "kind": "Content",

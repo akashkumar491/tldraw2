@@ -192,6 +192,13 @@ export class TestEditor extends Editor {
 		return PageRecordType.createId(id)
 	}
 
+	expectCursorToBe = (type: string, rotation = 0) => {
+		const { cursor } = this.getInstanceState()
+		expect(cursor.type).toBe(type)
+		expect(cursor.rotation).toBe(rotation)
+		return this
+	}
+
 	expectToBeIn = (path: string) => {
 		expect(this.getPath()).toBe(path)
 		return this
@@ -287,8 +294,6 @@ export class TestEditor extends Editor {
 		}
 	}
 
-	/* ------------------ Input Events ------------------ */
-
 	/**
 	Some of our updates are not synchronous any longer. For example, drawing happens on tick instead of on pointer move.
 	You can use this helper to force the tick, which will then process all the updates.
@@ -299,6 +304,8 @@ export class TestEditor extends Editor {
 		}
 		return this
 	}
+
+	/* ------------------ Input Events ------------------ */
 
 	pointerMove = (
 		x = this.inputs.currentScreenPoint.x,
@@ -322,7 +329,7 @@ export class TestEditor extends Editor {
 		this.dispatch({
 			...this.getPointerEventInfo(x, y, options, modifiers),
 			name: 'pointer_down',
-		})
+		}).forceTick()
 		return this
 	}
 
@@ -335,7 +342,7 @@ export class TestEditor extends Editor {
 		this.dispatch({
 			...this.getPointerEventInfo(x, y, options, modifiers),
 			name: 'pointer_up',
-		})
+		}).forceTick()
 		return this
 	}
 
@@ -370,16 +377,19 @@ export class TestEditor extends Editor {
 			name: 'double_click',
 			phase: 'up',
 		})
+		this.forceTick()
 		return this
 	}
 
 	keyDown = (key: string, options = {} as Partial<Exclude<TLKeyboardEventInfo, 'key'>>) => {
 		this.dispatch({ ...this.getKeyboardEventInfo(key, 'key_down', options) })
+		this.forceTick()
 		return this
 	}
 
 	keyRepeat = (key: string, options = {} as Partial<Exclude<TLKeyboardEventInfo, 'key'>>) => {
 		this.dispatch({ ...this.getKeyboardEventInfo(key, 'key_repeat', options) })
+		this.forceTick()
 		return this
 	}
 
@@ -391,7 +401,7 @@ export class TestEditor extends Editor {
 				altKey: this.inputs.altKey && key !== 'Alt',
 				...options,
 			}),
-		})
+		}).forceTick()
 		return this
 	}
 
@@ -528,7 +538,9 @@ export class TestEditor extends Editor {
 		for (let i = 1; i < numSteps; i++) {
 			this.pointerMove(center.x + (i * dx) / numSteps, center.y + (i * dy) / numSteps, options)
 		}
-		this.pointerUp(center.x + dx, center.y + dy, options)
+
+		this.pointerMove(center.x + dx, center.y + dy, options)
+		this.pointerUp()
 		return this
 	}
 

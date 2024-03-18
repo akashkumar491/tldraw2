@@ -134,6 +134,12 @@ export {
 	type TLEditorOptions,
 	type TLResizeShapeOptions,
 } from './lib/editor/Editor'
+export {
+	Interaction,
+	type InteractionEvent,
+	type InteractionEventHandlers,
+	type InteractionInfo,
+} from './lib/editor/interactions/Interaction'
 export type {
 	TLAfterChangeHandler,
 	TLAfterCreateHandler,
@@ -154,7 +160,6 @@ export {
 	type PointsSnapIndicator,
 	type SnapIndicator,
 } from './lib/editor/managers/SnapManager/SnapManager'
-export { BaseBoxShapeUtil, type TLBaseBoxShape } from './lib/editor/shapes/BaseBoxShapeUtil'
 export {
 	ShapeUtil,
 	type TLOnBeforeCreateHandler,
@@ -183,14 +188,18 @@ export {
 	type TLShapeUtilFlag,
 } from './lib/editor/shapes/ShapeUtil'
 export { GroupShapeUtil } from './lib/editor/shapes/group/GroupShapeUtil'
+export { BaseBoxShapeUtil } from './lib/editor/shapes/shared/BaseBoxShapeUtil'
 export {
 	type TLArcInfo,
 	type TLArrowInfo,
 	type TLArrowPoint,
 } from './lib/editor/shapes/shared/arrow/arrow-types'
 export { getArrowTerminalsInArrowSpace } from './lib/editor/shapes/shared/arrow/shared'
-export { resizeBox, type ResizeBoxOptions } from './lib/editor/shapes/shared/resizeBox'
-export { BaseBoxShapeTool } from './lib/editor/tools/BaseBoxShapeTool/BaseBoxShapeTool'
+export {
+	resizeBox,
+	type ResizeBoxOptions,
+	type TLBaseBoxShape,
+} from './lib/editor/shapes/shared/box-helpers'
 export { StateNode, type TLStateNodeConstructor } from './lib/editor/tools/StateNode'
 export { type SvgExportContext, type SvgExportDef } from './lib/editor/types/SvgExportContext'
 export { type TLContent } from './lib/editor/types/clipboard-types'

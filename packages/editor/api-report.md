@@ -141,20 +141,6 @@ export { atom }
 export function average(A: VecLike, B: VecLike): string;
 
 // @public (undocumented)
-export abstract class BaseBoxShapeTool extends StateNode {
-    // (undocumented)
-    static children: () => (typeof Idle | typeof Pointing)[];
-    // (undocumented)
-    static id: string;
-    // (undocumented)
-    static initial: string;
-    // (undocumented)
-    onCreate?: (_shape: null | TLShape) => null | void;
-    // (undocumented)
-    abstract shapeType: string;
-}
-
-// @public (undocumented)
 export abstract class BaseBoxShapeUtil<Shape extends TLBaseBoxShape> extends ShapeUtil<Shape> {
     // (undocumented)
     getGeometry(shape: Shape): Geometry2d;
@@ -1176,6 +1162,97 @@ export function HTMLContainer({ children, className, ...rest }: HTMLContainerPro
 
 // @public (undocumented)
 export type HTMLContainerProps = React_3.HTMLAttributes<HTMLDivElement>;
+
+// @public
+export abstract class Interaction<T extends object = object> {
+    constructor(editor: Editor, info?: InteractionInfo<T>);
+    cancel(): this;
+    complete(): this;
+    dispose: () => void;
+    // (undocumented)
+    protected duration: number;
+    // (undocumented)
+    editor: Editor;
+    // (undocumented)
+    protected elapsed: number;
+    // (undocumented)
+    protected handleEditorEvent: (event: TLEventInfo) => void;
+    // (undocumented)
+    protected handleTick: (elapsed: number) => void;
+    // (undocumented)
+    abstract readonly id: string;
+    // (undocumented)
+    info: InteractionInfo<T>;
+    interrupt(): this;
+    // (undocumented)
+    isDisposed: boolean;
+    // (undocumented)
+    protected onCancel?(): void;
+    // (undocumented)
+    protected onComplete?(): void;
+    // (undocumented)
+    protected onEnd?(): void;
+    // (undocumented)
+    protected onInterrupt?(): void;
+    // (undocumented)
+    protected onKeyDown?(): void;
+    // (undocumented)
+    protected onKeyUp?(): void;
+    // (undocumented)
+    protected onPointerMove?(): void;
+    // (undocumented)
+    protected onStart?(): void;
+    // (undocumented)
+    protected onUpdate?(): void;
+    start(): this;
+    update(): this;
+}
+
+// @public
+export class InteractionEvent<T extends object = object> {
+    constructor(info: T, duration: number, elapsed: number);
+    // (undocumented)
+    duration: number;
+    // (undocumented)
+    elapsed: number;
+    // (undocumented)
+    info: T;
+    // (undocumented)
+    isDefaultPrevented: boolean;
+    // (undocumented)
+    preventDefault(): void;
+}
+
+// @public
+export interface InteractionEventHandlers<T extends object = object> {
+    // (undocumented)
+    onBeforeCancel?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onBeforeComplete?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onBeforeEnd?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onBeforeInterrupt?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onBeforeStart?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onBeforeUpdate?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onCancel?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onComplete?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onEnd?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onInterrupt?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onStart?: (event: InteractionEvent<T>) => void;
+    // (undocumented)
+    onUpdate?: (event: InteractionEvent<T>) => void;
+}
+
+// @public
+export type InteractionInfo<T extends object = object> = InteractionEventHandlers & T;
 
 // @public
 export function intersectCircleCircle(c1: VecLike, r1: number, c2: VecLike, r2: number): Vec[];

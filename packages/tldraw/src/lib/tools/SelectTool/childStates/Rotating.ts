@@ -1,180 +1,22 @@
-import {
-	RotateCorner,
-	StateNode,
-	TLEventHandlers,
-	TLPointerEventInfo,
-	TLRotationSnapshot,
-	applyRotationToSnapshotShapes,
-	degreesToRadians,
-	getRotationSnapshot,
-	shortAngleDist,
-	snapAngle,
-} from '@tldraw/editor'
-import { CursorTypeMap } from './PointingResizeHandle'
-
-const ONE_DEGREE = Math.PI / 180
+import { RotateCorner, StateNode } from '@tldraw/editor'
+import { RotatingInteraction } from '../../../interactions/RotatingInteraction'
 
 export class Rotating extends StateNode {
 	static override id = 'rotating'
 
-	snapshot = {} as TLRotationSnapshot
+	session?: RotatingInteraction
 
-	info = {} as Extract<TLPointerEventInfo, { target: 'selection' }> & { onInteractionEnd?: string }
-
-	markId = ''
-	isDirty = false
-
-	override onEnter = (
-		info: TLPointerEventInfo & { target: 'selection'; onInteractionEnd?: string }
-	) => {
-		// Store the event information
-		this.info = info
-		this.parent.setCurrentToolIdMask(info.onInteractionEnd)
-
-		this.markId = 'rotate start'
-		this.editor.mark(this.markId)
-
-		const snapshot = getRotationSnapshot({ editor: this.editor })
-		if (!snapshot) return this.parent.transition('idle', this.info)
-		this.snapshot = snapshot
-
-		// Trigger a pointer move
-		const newSelectionRotation = this._getRotationFromPointerPosition({
-			snapToNearestDegree: false,
-		})
-
-		applyRotationToSnapshotShapes({
-			editor: this.editor,
-			delta: this._getRotationFromPointerPosition({ snapToNearestDegree: false }),
-			snapshot: this.snapshot,
-			stage: 'start',
-		})
-
-		// Update cursor
-		this.editor.updateInstanceState({
-			cursor: {
-				type: CursorTypeMap[this.info.handle as RotateCorner],
-				rotation: newSelectionRotation + this.snapshot.initialSelectionRotation,
+	override onEnter = (info: { handle: RotateCorner }) => {
+		this.session = new RotatingInteraction(this.editor, {
+			handle: info.handle,
+			onEnd: () => {
+				this.parent.transition('idle')
 			},
-		})
+		}).start()
 	}
 
 	override onExit = () => {
-		this.editor.setCursor({ type: 'default', rotation: 0 })
-		this.parent.setCurrentToolIdMask(undefined)
-
-		this.snapshot = {} as TLRotationSnapshot
-	}
-
-	override onTick = () => {
-		if (this.isDirty) {
-			this.isDirty = false
-			this.update()
-		}
-	}
-
-	override onPointerMove = () => {
-		this.isDirty = true
-	}
-
-	override onKeyDown = () => {
-		this.update()
-	}
-
-	override onKeyUp = () => {
-		this.update()
-	}
-
-	override onPointerUp: TLEventHandlers['onPointerUp'] = () => {
-		this.complete()
-	}
-
-	override onComplete: TLEventHandlers['onComplete'] = () => {
-		this.complete()
-	}
-
-	override onCancel = () => {
-		this.cancel()
-	}
-
-	// ---
-
-	private update = () => {
-		const newSelectionRotation = this._getRotationFromPointerPosition({
-			snapToNearestDegree: false,
-		})
-
-		applyRotationToSnapshotShapes({
-			editor: this.editor,
-			delta: newSelectionRotation,
-			snapshot: this.snapshot,
-			stage: 'update',
-		})
-
-		// Update cursor
-		this.editor.updateInstanceState({
-			cursor: {
-				type: CursorTypeMap[this.info.handle as RotateCorner],
-				rotation: newSelectionRotation + this.snapshot.initialSelectionRotation,
-			},
-		})
-	}
-
-	private cancel = () => {
-		this.editor.bailToMark(this.markId)
-		if (this.info.onInteractionEnd) {
-			this.editor.setCurrentTool(this.info.onInteractionEnd, this.info)
-		} else {
-			this.parent.transition('idle', this.info)
-		}
-	}
-
-	private complete = () => {
-		applyRotationToSnapshotShapes({
-			editor: this.editor,
-			delta: this._getRotationFromPointerPosition({ snapToNearestDegree: true }),
-			snapshot: this.snapshot,
-			stage: 'end',
-		})
-		if (this.info.onInteractionEnd) {
-			this.editor.setCurrentTool(this.info.onInteractionEnd, this.info)
-		} else {
-			this.parent.transition('idle', this.info)
-		}
-	}
-
-	_getRotationFromPointerPosition({ snapToNearestDegree }: { snapToNearestDegree: boolean }) {
-		const selectionRotation = this.editor.getSelectionRotation()
-		const selectionBounds = this.editor.getSelectionRotatedPageBounds()
-		const {
-			inputs: { shiftKey, currentPagePoint },
-		} = this.editor
-		const { initialCursorAngle, initialSelectionRotation } = this.snapshot
-
-		if (!selectionBounds) return initialSelectionRotation
-
-		const selectionPageCenter = selectionBounds.center
-			.clone()
-			.rotWith(selectionBounds.point, selectionRotation)
-
-		// The delta is the difference between the current angle and the initial angle
-		const preSnapRotationDelta = selectionPageCenter.angle(currentPagePoint) - initialCursorAngle
-		let newSelectionRotation = initialSelectionRotation + preSnapRotationDelta
-
-		if (shiftKey) {
-			newSelectionRotation = snapAngle(newSelectionRotation, 24)
-		} else if (snapToNearestDegree) {
-			newSelectionRotation = Math.round(newSelectionRotation / ONE_DEGREE) * ONE_DEGREE
-
-			if (this.editor.getInstanceState().isCoarsePointer) {
-				const snappedToRightAngle = snapAngle(newSelectionRotation, 4)
-				const angleToRightAngle = shortAngleDist(newSelectionRotation, snappedToRightAngle)
-				if (Math.abs(angleToRightAngle) < degreesToRadians(5)) {
-					newSelectionRotation = snappedToRightAngle
-				}
-			}
-		}
-
-		return newSelectionRotation - initialSelectionRotation
+		this.session?.dispose()
+		delete this.session
 	}
 }

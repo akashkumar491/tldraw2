@@ -120,6 +120,14 @@ import { getStraightArrowInfo } from './shapes/shared/arrow/straight-arrow'
 import { RootState } from './tools/RootState'
 import { StateNode, TLStateNodeConstructor } from './tools/StateNode'
 import { TLContent } from './types/clipboard-types'
+import {
+	CreateShapeError,
+	EditorResult,
+	MAX_SHAPES_REACHED_ERROR_ERROR,
+	NOT_ARRAY_OF_SHAPES_ERROR,
+	NO_SHAPES_PROVIDED_ERROR,
+	READONLY_ROOM_ERROR,
+} from './types/editor-result-types'
 import { TLEventMap } from './types/emit-types'
 import {
 	TLEventInfo,
@@ -6241,9 +6249,8 @@ export class Editor extends EventEmitter<TLEventMap> {
 	 *
 	 * @public
 	 */
-	createShape<T extends TLUnknownShape>(shape: OptionalKeys<TLShapePartial<T>, 'id'>): this {
-		this.createShapes([shape])
-		return this
+	createShape<T extends TLUnknownShape>(shape: OptionalKeys<TLShapePartial<T>, 'id'>) {
+		return this.createShapes([shape])
 	}
 
 	/**
@@ -6260,12 +6267,14 @@ export class Editor extends EventEmitter<TLEventMap> {
 	 *
 	 * @public
 	 */
-	createShapes<T extends TLUnknownShape>(shapes: OptionalKeys<TLShapePartial<T>, 'id'>[]): this {
+	createShapes<T extends TLUnknownShape>(
+		shapes: OptionalKeys<TLShapePartial<T>, 'id'>[]
+	): EditorResult<void, CreateShapeError> {
 		if (!Array.isArray(shapes)) {
-			throw Error('Editor.createShapes: must provide an array of shapes or shape partials')
+			return EditorResult.error(NOT_ARRAY_OF_SHAPES_ERROR)
 		}
-		if (this.getInstanceState().isReadonly) return this
-		if (shapes.length <= 0) return this
+		if (this.getInstanceState().isReadonly) return EditorResult.error(READONLY_ROOM_ERROR)
+		if (shapes.length <= 0) return EditorResult.error(NO_SHAPES_PROVIDED_ERROR)
 
 		const currentPageShapeIds = this.getCurrentPageShapeIds()
 
@@ -6274,12 +6283,12 @@ export class Editor extends EventEmitter<TLEventMap> {
 		if (maxShapesReached) {
 			// can't create more shapes than fit on the page
 			alertMaxShapes(this)
-			return this
+			return EditorResult.error(MAX_SHAPES_REACHED_ERROR_ERROR)
 		}
 
 		const focusedGroupId = this.getFocusedGroupId()
 
-		return this.batch(() => {
+		this.batch(() => {
 			// 1. Parents
 
 			// Make sure that each partial will become the child of either the
@@ -6439,6 +6448,7 @@ export class Editor extends EventEmitter<TLEventMap> {
 
 			this.store.put(shapeRecordsToCreate)
 		})
+		return EditorResult.ok()
 	}
 
 	private animatingShapes = new Map<TLShapeId, string>()
@@ -8529,7 +8539,10 @@ export class Editor extends EventEmitter<TLEventMap> {
 
 function alertMaxShapes(editor: Editor, pageId = editor.getCurrentPageId()) {
 	const name = editor.getPage(pageId)!.name
-	editor.emit('max-shapes', { name, pageId, count: MAX_SHAPES_PER_PAGE })
+	editor.emit('error', {
+		type: 'max-shapes-reached',
+		value: [{ name, pageId, count: MAX_SHAPES_PER_PAGE }],
+	})
 }
 
 function applyPartialToShape<T extends TLShape>(prev: T, partial?: TLShapePartial<T>): T {

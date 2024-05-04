@@ -633,8 +633,8 @@ export class Editor extends EventEmitter<TLEventMap> {
         };
     };
     createPage(page: Partial<TLPage>): this;
-    createShape<T extends TLUnknownShape>(shape: OptionalKeys<TLShapePartial<T>, 'id'>): this;
-    createShapes<T extends TLUnknownShape>(shapes: OptionalKeys<TLShapePartial<T>, 'id'>[]): this;
+    createShape<T extends TLUnknownShape>(shape: OptionalKeys<TLShapePartial<T>, 'id'>): EditorResult<void, CreateShapeError>;
+    createShapes<T extends TLUnknownShape>(shapes: OptionalKeys<TLShapePartial<T>, 'id'>[]): EditorResult<void, CreateShapeError>;
     deleteAssets(assets: TLAsset[] | TLAssetId[]): this;
     deleteOpenMenu(id: string): this;
     deletePage(page: TLPage | TLPageId): this;
@@ -2194,6 +2194,16 @@ export interface TLErrorBoundaryProps {
 }
 
 // @public (undocumented)
+export type TLErrorEvent = {
+    type: 'max-shapes-reached';
+    value: [{
+        count: number;
+        name: string;
+        pageId: TLPageId;
+    }];
+};
+
+// @public (undocumented)
 export interface TLEventHandlers {
     // (undocumented)
     onCancel: TLCancelEvent;
@@ -2237,12 +2247,6 @@ export type TLEventInfo = TLCancelEventInfo | TLClickEventInfo | TLCompleteEvent
 // @public (undocumented)
 export interface TLEventMap {
     // (undocumented)
-    'max-shapes': [{
-        count: number;
-        name: string;
-        pageId: TLPageId;
-    }];
-    // (undocumented)
     'select-all-text': [{
         shapeId: TLShapeId;
     }];
@@ -2256,6 +2260,8 @@ export interface TLEventMap {
     crash: [{
         error: unknown;
     }];
+    // (undocumented)
+    error: [TLErrorEvent];
     // (undocumented)
     event: [TLEventInfo];
     // (undocumented)

@@ -593,8 +593,7 @@ export type TLOnHandleDragHandler<T extends TLShape> = (
 	shape: T,
 	info: {
 		handle: TLHandle
-		isPrecise: boolean
-		initial?: T | undefined
+		timeInBoundShape: number
 	}
 ) => TLShapePartial<T> | void
 

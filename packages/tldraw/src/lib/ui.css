@@ -1797,3 +1797,83 @@
 		opacity: 1;
 	}
 }
+
+/* ------------------- Timer ------------------- */
+.tlui-timer__wrapper {
+	display: flex;
+	margin: var(--space-2) var(--space-3);
+	background-color: var(--color-low);
+	border-radius: var(--radius-3);
+	overflow: hidden;
+}
+
+.tlui-timer__time-wrapper {
+	display: flex;
+	align-items: center;
+	overflow: hidden;
+	height: 100%;
+	position: relative;
+	justify-content: center;
+	pointer-events: all;
+	height: 40px;
+}
+
+.tlui-timer__time-wrapper-active {
+	background-color: var(--color-muted-2);
+}
+
+.tlui-timer__time-wrapper-clickable {
+	cursor: pointer;
+	pointer-events: all;
+	padding: 10px;
+}
+
+.tlui-timer__time-color-background {
+	z-index: 0;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.tlui-timer__time-text {
+	background: none;
+	border: none;
+	color: var(--color-text-1);
+	z-index: 1;
+	font-size: 18px;
+	width: 25px;
+	text-align: center;
+	padding: 0;
+	display: block;
+}
+
+.tlui-timer__time-separator {
+	z-index: 1;
+}
+
+.tlui-timer__quick-actions-wrapper {
+	position: relative;
+}
+
+.tlui-timer__quick-actions-wrapper-active {
+	background-color: var(--color-hint);
+}
+
+.tlui-timer__quick-actions-icon-wrapper {
+	margin: 0 var(--space-2);
+	height: 100%;
+	display: flex;
+	align-items: center;
+	pointer-events: all;
+}
+
+.tlui-timer__quick-actions-icon-notification {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--color-selected);
+	position: absolute;
+	right: 0;
+	top: 10px;
+}

@@ -15,8 +15,10 @@ import {
 	EditSubmenu,
 	ExportFileContentSubMenu,
 	ExtrasGroup,
+	initializeTimer,
 	PeopleMenu,
 	PreferencesGroup,
+	ServerOffsetProvider,
 	TLComponents,
 	Tldraw,
 	TldrawUiButton,
@@ -30,6 +32,7 @@ import {
 	useValue,
 	ViewSubmenu,
 } from 'tldraw'
+import { useGetServerOffset } from '../hooks/useGetServerOffset'
 import { useLegacyUrlParams } from '../hooks/useLegacyUrlParams'
 import { assetUrls } from '../utils/assetUrls'
 import { MULTIPLAYER_SERVER } from '../utils/config'
@@ -41,7 +44,9 @@ import { OPEN_FILE_ACTION, SAVE_FILE_COPY_ACTION, useFileSystem } from '../utils
 import { useHandleUiEvents } from '../utils/useHandleUiEvent'
 import { DocumentTopZone } from './DocumentName/DocumentName'
 import { MultiplayerFileMenu } from './FileMenu'
+import { HelperButtons } from './HelperButtons'
 import { Links } from './Links'
+import { QuickActions } from './QuickActions'
 import { ShareMenu } from './ShareMenu'
 import { SneakyOnDropOverride } from './SneakyOnDropOverride'
 import { StoreErrorScreen } from './StoreErrorScreen'
@@ -110,6 +115,8 @@ const components: TLComponents = {
 			</div>
 		)
 	},
+	HelperButtons,
+	QuickActions,
 }
 
 export function MultiplayerEditor({
@@ -123,6 +130,7 @@ export function MultiplayerEditor({
 	useLegacyUrlParams()
 
 	const handleUiEvent = useHandleUiEvents()
+	const offset = useGetServerOffset()
 
 	const storeWithStatus = useSync({
 		uri: `${MULTIPLAYER_SERVER}/${RoomOpenModeToPath[roomOpenMode]}/${roomSlug}`,
@@ -138,6 +146,8 @@ export function MultiplayerEditor({
 
 	const handleMount = useCallback(
 		(editor: Editor) => {
+			initializeTimer(editor)
+
 			if (!isReadonly) {
 				;(window as any).app = editor
 				;(window as any).editor = editor
@@ -156,21 +166,23 @@ export function MultiplayerEditor({
 
 	return (
 		<div className="tldraw__editor">
-			<Tldraw
-				licenseKey={getLicenseKey()}
-				store={storeWithStatus}
-				assetUrls={assetUrls}
-				onMount={handleMount}
-				overrides={[sharingUiOverrides, fileSystemUiOverrides]}
-				initialState={isReadonly ? 'hand' : 'select'}
-				onUiEvent={handleUiEvent}
-				components={components}
-				deepLinks
-				inferDarkMode
-			>
-				<SneakyOnDropOverride isMultiplayer />
-				<ThemeUpdater />
-			</Tldraw>
+			<ServerOffsetProvider offset={offset}>
+				<Tldraw
+					licenseKey={getLicenseKey()}
+					store={storeWithStatus}
+					assetUrls={assetUrls}
+					onMount={handleMount}
+					overrides={[sharingUiOverrides, fileSystemUiOverrides]}
+					initialState={isReadonly ? 'hand' : 'select'}
+					onUiEvent={handleUiEvent}
+					components={components}
+					deepLinks
+					inferDarkMode
+				>
+					<SneakyOnDropOverride isMultiplayer />
+					<ThemeUpdater />
+				</Tldraw>
+			</ServerOffsetProvider>
 		</div>
 	)
 }

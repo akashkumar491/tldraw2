@@ -17,6 +17,7 @@ import { getReadonlySlug } from './routes/getReadonlySlug'
 import { getRoomHistory } from './routes/getRoomHistory'
 import { getRoomHistorySnapshot } from './routes/getRoomHistorySnapshot'
 import { getRoomSnapshot } from './routes/getRoomSnapshot'
+import { getServerTime } from './routes/getServerTime'
 import { joinExistingRoom } from './routes/joinExistingRoom'
 import { Environment } from './types'
 export { TLDrawDurableObject } from './TLDrawDurableObject'
@@ -43,6 +44,7 @@ const router = createRouter<Environment>()
 	.get(`/${ROOM_PREFIX}/:roomId/history`, getRoomHistory)
 	.get(`/${ROOM_PREFIX}/:roomId/history/:timestamp`, getRoomHistorySnapshot)
 	.get('/readonly-slug/:roomId', getReadonlySlug)
+	.get('/server-time', getServerTime)
 	.get('/unfurl', extractBookmarkMetadata)
 	.post('/unfurl', extractBookmarkMetadata)
 	.post(`/${ROOM_PREFIX}/:roomId/restore`, forwardRoomRequest)

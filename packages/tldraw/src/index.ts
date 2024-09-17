@@ -191,6 +191,8 @@ export {
 	type TLUiStylePanelContentProps,
 	type ThemeStylePickerSetProps,
 } from './lib/ui/components/StylePanel/DefaultStylePanelContent'
+export { Timer, type TimerProps } from './lib/ui/components/Timer/Timer'
+export type { TLTimerProps } from './lib/ui/components/Timer/Timer'
 export {
 	DefaultToolbar,
 	type DefaultToolbarProps,
@@ -423,6 +425,12 @@ export { useMenuIsOpen } from './lib/ui/hooks/useMenuIsOpen'
 export { usePreloadAssets } from './lib/ui/hooks/usePreloadAssets'
 export { useReadonly } from './lib/ui/hooks/useReadonly'
 export { useRelevantStyles } from './lib/ui/hooks/useRelevantStyles'
+export {
+	ServerOffsetProvider,
+	initializeTimer,
+	useTimer,
+	type ServerOffsetProviderProps,
+} from './lib/ui/hooks/useTimer'
 export {
 	useTools,
 	type TLUiToolItem,

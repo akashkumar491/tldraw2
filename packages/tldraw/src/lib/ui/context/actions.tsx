@@ -18,12 +18,31 @@ import {
 	createShapeId,
 	openWindow,
 	useEditor,
+	useValue,
 } from '@tldraw/editor'
 import * as React from 'react'
 import { kickoutOccludedShapes } from '../../tools/SelectTool/selectHelpers'
 import { fitFrameToContent, removeFrame } from '../../utils/frames/frames'
 import { EditLinkDialog } from '../components/EditLinkDialog'
 import { EmbedDialog } from '../components/EmbedDialog'
+import {
+	showMenuPaste,
+	useAllowGroup,
+	useAllowUngroup,
+	useCanFitFrameToContent,
+	useCanFlattenToImage,
+	useCanRemoveFrame,
+	useCanUnlockAll,
+	useHasLinkShapeSelected,
+	useIsFollowingUser,
+	useIsInSelectState,
+	useOneEmbedSelected,
+	useOneEmbeddableBookmarkSelected,
+	useOnlyFlippableShape,
+	useShowBackToContent,
+	useThreeStackableItems,
+	useUnlockedSelectedShapesCount,
+} from '../hooks/menu-hooks'
 import { useMenuClipboardEvents } from '../hooks/useClipboardEvents'
 import { useCopyAs } from '../hooks/useCopyAs'
 import { useExportAs } from '../hooks/useExportAs'
@@ -51,6 +70,8 @@ export interface TLUiActionItem<
 	readonlyOk?: boolean
 	checkbox?: boolean
 	onSelect(source: TLUiEventSource): Promise<void> | void
+	enabled(): boolean
+	disabledDescription?: TransationKey
 }
 
 /** @public */
@@ -82,6 +103,13 @@ function getExportName(editor: Editor, defaultName: string) {
 	return undefined
 }
 
+function getSelectedOrPageShapeIds(editor: Editor) {
+	let ids = editor.getSelectedShapeIds()
+	if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
+	if (ids.length === 0) return
+	return ids
+}
+
 /** @internal */
 export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 	const editor = useEditor()
@@ -97,6 +125,38 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 	const copyAs = useCopyAs()
 	const exportAs = useExportAs()
 	const defaultDocumentName = msg('document.default-name')
+
+	const oneSelected = useUnlockedSelectedShapesCount(1)
+	const twoSelected = useUnlockedSelectedShapesCount(2)
+	const threeSelected = useUnlockedSelectedShapesCount(3)
+	const threeStackableItems = useThreeStackableItems()
+
+	const isInSelectState = useIsInSelectState()
+	const showEditLink = useHasLinkShapeSelected()
+
+	const allowGroup = useAllowGroup()
+	const allowUngroup = useAllowUngroup()
+
+	const alignEnabled = !!(twoSelected && isInSelectState)
+	const distributeEnabled = !!(threeSelected && isInSelectState)
+	const stackingEnabled = threeStackableItems && isInSelectState
+	const reorderingEnabled = !!(oneSelected && isInSelectState)
+	const rotateEnabled = !!(oneSelected && isInSelectState)
+	const editLinkEnabled = !!oneSelected && showEditLink
+	const cursorChatEnabled =
+		editor.getCurrentToolId() === 'select' && !editor.getInstanceState().isCoarsePointer
+	const convertToEmbedEnabled = useOneEmbeddableBookmarkSelected()
+	const convertToBookmarkEnabled = useOneEmbedSelected()
+	const flattenToImagesEnabled = useCanFlattenToImage()
+	const removeFrameEnabled = useCanRemoveFrame()
+	const fitFrameToContentEnabled = useCanFitFrameToContent()
+	const unlockAllEnabled = useCanUnlockAll()
+	const pageHasShapes = editor.getCurrentPageShapeIds().size >= 1
+	const onlyFlippableShapeSelected = useOnlyFlippableShape()
+	const isFollowingUser = useIsFollowingUser()
+	const [backToContentEnabled] = useShowBackToContent()
+	const undoEnabled = useValue('undo enabled', () => editor.getCanUndo(), [editor])
+	const redoEnabled = useValue('redo enabled', () => editor.getCanRedo(), [editor])
 
 	const getEmbedDefinition = useGetEmbedDefinition()
 
@@ -125,13 +185,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				label: 'action.edit-link',
 				icon: 'link',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('edit-link', { source })
 					editor.markHistoryStoppingPoint('edit-link')
 					addDialog({ component: EditLinkDialog })
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && editLinkEnabled
+				},
+				disabledDescription: 'action.edit-link-disabled-description',
 			},
 			{
 				id: 'insert-embed',
@@ -140,6 +203,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				onSelect(source) {
 					trackEvent('insert-embed', { source })
 					addDialog({ component: EmbedDialog })
+				},
+				enabled() {
+					return true
 				},
 			},
 			{
@@ -150,6 +216,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					trackEvent('insert-media', { source })
 					insertMedia()
 				},
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'undo',
@@ -157,9 +226,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'undo',
 				kbd: '$z',
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('undo', { source })
 					editor.undo()
 				},
+				enabled() {
+					return undoEnabled
+				},
+				disabledDescription: 'action.undo-disabled-description',
 			},
 			{
 				id: 'redo',
@@ -167,9 +241,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'redo',
 				kbd: '$!z',
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('redo', { source })
 					editor.redo()
 				},
+				enabled() {
+					return redoEnabled
+				},
+				disabledDescription: 'action.redo-disabled-description',
 			},
 			{
 				id: 'export-as-svg',
@@ -180,12 +259,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+					const ids = getSelectedOrPageShapeIds(editor)!
 					trackEvent('export-as', { format: 'svg', source })
 					exportAs(ids, 'svg', getExportName(editor, defaultDocumentName))
 				},
+				enabled() {
+					const ids = getSelectedOrPageShapeIds(editor)
+					return !!ids && pageHasShapes
+				},
+				disabledDescription: 'action.export-as-disabled-description',
 			},
 			{
 				id: 'export-as-png',
@@ -196,12 +279,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+					const ids = getSelectedOrPageShapeIds(editor)!
 					trackEvent('export-as', { format: 'png', source })
 					exportAs(ids, 'png', getExportName(editor, defaultDocumentName))
 				},
+				enabled() {
+					const ids = getSelectedOrPageShapeIds(editor)!
+					return !!ids && pageHasShapes
+				},
+				disabledDescription: 'action.export-as-disabled-description',
 			},
 			{
 				id: 'export-as-json',
@@ -212,12 +299,17 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+					const ids = getSelectedOrPageShapeIds(editor)!
+
 					trackEvent('export-as', { format: 'json', source })
 					exportAs(ids, 'json', getExportName(editor, defaultDocumentName))
 				},
+				enabled() {
+					const ids = getSelectedOrPageShapeIds(editor)!
+					return !!ids && pageHasShapes
+				},
+				disabledDescription: 'action.export-as-disabled-description',
 			},
 			{
 				id: 'export-all-as-svg',
@@ -225,12 +317,12 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					default: 'action.export-all-as-svg',
 					menu: 'action.export-all-as-svg.short',
 					['context-menu']: 'action.export-all-as-svg.short',
+					'command-bar': 'action.export-all-as-svg.long',
 				},
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+
 					trackEvent('export-all-as', { format: 'svg', source })
 					exportAs(
 						Array.from(editor.getCurrentPageShapeIds()),
@@ -238,6 +330,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						getExportName(editor, defaultDocumentName)
 					)
 				},
+				enabled() {
+					const ids = editor.getCurrentPageShapeIds()
+					return ids.size > 0
+				},
+				disabledDescription: 'action.export-as-disabled-description',
 			},
 			{
 				id: 'export-all-as-png',
@@ -245,14 +342,20 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					default: 'action.export-all-as-png',
 					menu: 'action.export-all-as-png.short',
 					['context-menu']: 'action.export-all-as-png.short',
+					'command-bar': 'action.export-all-as-png.long',
 				},
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					const ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
 					trackEvent('export-all-as', { format: 'png', source })
 					exportAs(ids, 'png', getExportName(editor, defaultDocumentName))
 				},
+				enabled() {
+					const ids = editor.getCurrentPageShapeIds()
+					return ids.size > 0
+				},
+				disabledDescription: 'action.export-as-disabled-description',
 			},
 			{
 				id: 'export-all-as-json',
@@ -260,14 +363,20 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					default: 'action.export-all-as-json',
 					menu: 'action.export-all-as-json.short',
 					['context-menu']: 'action.export-all-as-json.short',
+					'command-bar': 'action.export-all-as-json.long',
 				},
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					const ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
 					trackEvent('export-all-as', { format: 'json', source })
 					exportAs(ids, 'json', getExportName(editor, defaultDocumentName))
 				},
+				enabled() {
+					const ids = editor.getCurrentPageShapeIds()
+					return ids.size > 0
+				},
+				disabledDescription: 'action.export-as-disabled-description',
 			},
 			{
 				id: 'copy-as-svg',
@@ -279,12 +388,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '$!c',
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+					const ids = getSelectedOrPageShapeIds(editor)!
 					trackEvent('copy-as', { format: 'svg', source })
 					copyAs(ids, 'svg')
 				},
+				enabled() {
+					const ids = getSelectedOrPageShapeIds(editor)
+					return !!ids
+				},
+				disabledDescription: 'action.copy-as-disabled-description',
 			},
 			{
 				id: 'copy-as-png',
@@ -295,12 +408,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+					const ids = getSelectedOrPageShapeIds(editor)!
 					trackEvent('copy-as', { format: 'png', source })
 					copyAs(ids, 'png')
 				},
+				enabled() {
+					const ids = getSelectedOrPageShapeIds(editor)
+					return !!ids
+				},
+				disabledDescription: 'action.copy-as-disabled-description',
 			},
 			{
 				id: 'copy-as-json',
@@ -311,19 +428,22 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				readonlyOk: true,
 				onSelect(source) {
-					let ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) ids = Array.from(editor.getCurrentPageShapeIds().values())
-					if (ids.length === 0) return
+					if (!this.enabled()) return
+					const ids = getSelectedOrPageShapeIds(editor)!
 					trackEvent('copy-as', { format: 'json', source })
 					copyAs(ids, 'json')
 				},
+				enabled() {
+					const ids = getSelectedOrPageShapeIds(editor)
+					return !!ids
+				},
+				disabledDescription: 'action.copy-as-disabled-description',
 			},
 			{
 				id: 'toggle-auto-size',
 				label: 'action.toggle-auto-size',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('toggle-auto-size', { source })
 					editor.markHistoryStoppingPoint('toggling auto size')
@@ -351,6 +471,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						shapes.map((shape) => shape.id)
 					)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst()
+				},
 			},
 			{
 				id: 'open-embed-link',
@@ -372,13 +495,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					openWindow(shape.props.url, '_blank')
 				},
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'select-zoom-tool',
 				readonlyOk: true,
 				kbd: 'z',
 				onSelect(source) {
-					if (editor.root.getCurrent()?.id === 'zoom') return
+					if (!this.enabled()) return
 
 					trackEvent('zoom-tool', { source })
 					if (!(editor.inputs.shiftKey || editor.inputs.ctrlKey)) {
@@ -388,13 +514,15 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						}
 					}
 				},
+				enabled() {
+					return editor.root.getCurrent()?.id !== 'zoom'
+				},
 			},
 			{
 				id: 'convert-to-bookmark',
 				label: 'action.convert-to-bookmark',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					editor.run(() => {
 						trackEvent('convert-to-bookmark', { source })
@@ -431,13 +559,18 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.createShapes(createList)
 					})
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() && !mustGoBackToSelectToolFirst() && convertToBookmarkEnabled
+					)
+				},
+				disabledDescription: 'action.convert-to-bookmark-disabled-description',
 			},
 			{
 				id: 'convert-to-embed',
 				label: 'action.convert-to-embed',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('convert-to-embed', { source })
 
@@ -486,6 +619,12 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.createShapes(createList)
 					})
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() && !mustGoBackToSelectToolFirst() && convertToEmbedEnabled
+					)
+				},
+				disabledDescription: 'action.convert-to-embed-disabled-description',
 			},
 			{
 				id: 'duplicate',
@@ -493,8 +632,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				label: 'action.duplicate',
 				icon: 'duplicate',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('duplicate-shapes', { source })
 					const instanceState = editor.getInstanceState()
@@ -533,6 +671,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						})
 					}
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() &&
+						!mustGoBackToSelectToolFirst() &&
+						!!(oneSelected && isInSelectState)
+					)
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'ungroup',
@@ -540,13 +686,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '$!g',
 				icon: 'ungroup',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('ungroup-shapes', { source })
 					editor.markHistoryStoppingPoint('ungroup')
 					editor.ungroupShapes(editor.getSelectedShapeIds())
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && allowUngroup
+				},
+				disabledDescription: 'action.ungroup-disabled-description',
 			},
 			{
 				id: 'group',
@@ -554,8 +703,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '$g',
 				icon: 'group',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('group-shapes', { source })
 					const onlySelectedShape = editor.getOnlySelectedShape()
@@ -567,13 +715,21 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.groupShapes(editor.getSelectedShapeIds())
 					}
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() &&
+						!mustGoBackToSelectToolFirst() &&
+						!!(allowGroup && twoSelected && isInSelectState)
+					)
+				},
+				disabledDescription: 'action.group-disabled-description',
 			},
 			{
 				id: 'remove-frame',
 				label: 'action.remove-frame',
 				kbd: '$!f',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
+					if (!this.enabled()) return
 
 					trackEvent('remove-frame', { source })
 					const selectedShapes = editor.getSelectedShapes()
@@ -588,12 +744,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						)
 					}
 				},
+				enabled() {
+					return canApplySelectionAction() && removeFrameEnabled
+				},
+				disabledDescription: 'action.remove-frame-disabled-description',
 			},
 			{
 				id: 'fit-frame-to-content',
 				label: 'action.fit-frame-to-content',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
+					if (!this.enabled()) return
 
 					trackEvent('fit-frame-to-content', { source })
 					const onlySelectedShape = editor.getOnlySelectedShape()
@@ -602,6 +762,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						fitFrameToContent(editor, onlySelectedShape.id)
 					}
 				},
+				enabled() {
+					return canApplySelectionAction() && fitFrameToContentEnabled
+				},
+				disabledDescription: 'action.fit-frame-to-content-disabled-description',
 			},
 			{
 				id: 'align-left',
@@ -609,8 +773,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '?A',
 				icon: 'align-left',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('align-shapes', { operation: 'left', source })
 					editor.markHistoryStoppingPoint('align left')
@@ -618,6 +781,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.alignShapes(selectedShapeIds, 'left')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'align-center-horizontal',
@@ -628,8 +795,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '?H',
 				icon: 'align-center-horizontal',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('align-shapes', { operation: 'center-horizontal', source })
 					editor.markHistoryStoppingPoint('align center horizontal')
@@ -637,6 +803,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.alignShapes(selectedShapeIds, 'center-horizontal')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'align-right',
@@ -644,8 +814,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '?D',
 				icon: 'align-right',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('align-shapes', { operation: 'right', source })
 					editor.markHistoryStoppingPoint('align right')
@@ -653,6 +822,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.alignShapes(selectedShapeIds, 'right')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'align-center-vertical',
@@ -663,8 +836,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '?V',
 				icon: 'align-center-vertical',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('align-shapes', { operation: 'center-vertical', source })
 					editor.markHistoryStoppingPoint('align center vertical')
@@ -672,6 +844,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.alignShapes(selectedShapeIds, 'center-vertical')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'align-top',
@@ -679,8 +855,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'align-top',
 				kbd: '?W',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('align-shapes', { operation: 'top', source })
 					editor.markHistoryStoppingPoint('align top')
@@ -688,6 +863,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.alignShapes(selectedShapeIds, 'top')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'align-bottom',
@@ -695,8 +874,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'align-bottom',
 				kbd: '?S',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('align-shapes', { operation: 'bottom', source })
 					editor.markHistoryStoppingPoint('align bottom')
@@ -704,6 +882,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.alignShapes(selectedShapeIds, 'bottom')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'distribute-horizontal',
@@ -714,8 +896,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'distribute-horizontal',
 				kbd: '?!h',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('distribute-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('distribute horizontal')
@@ -723,6 +904,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.distributeShapes(selectedShapeIds, 'horizontal')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && distributeEnabled
+				},
+				disabledDescription: 'action.distribute-disabled-description',
 			},
 			{
 				id: 'distribute-vertical',
@@ -733,8 +918,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'distribute-vertical',
 				kbd: '?!V',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('distribute-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('distribute vertical')
@@ -742,6 +926,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.distributeShapes(selectedShapeIds, 'vertical')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && distributeEnabled
+				},
+				disabledDescription: 'action.distribute-disabled-description',
 			},
 			{
 				id: 'stretch-horizontal',
@@ -751,8 +939,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				icon: 'stretch-horizontal',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('stretch-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('stretch horizontal')
@@ -760,6 +947,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.stretchShapes(selectedShapeIds, 'horizontal')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'stretch-vertical',
@@ -769,8 +960,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				icon: 'stretch-vertical',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('stretch-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('stretch vertical')
@@ -778,6 +968,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.stretchShapes(selectedShapeIds, 'vertical')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && alignEnabled
+				},
+				disabledDescription: 'action.align-disabled-description',
 			},
 			{
 				id: 'flip-horizontal',
@@ -787,8 +981,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				kbd: '!h',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('flip-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('flip horizontal')
@@ -796,14 +989,20 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.flipShapes(selectedShapeIds, 'horizontal')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() &&
+						!mustGoBackToSelectToolFirst() &&
+						!!(twoSelected || onlyFlippableShapeSelected)
+					)
+				},
 			},
 			{
 				id: 'flip-vertical',
 				label: { default: 'action.flip-vertical', ['context-menu']: 'action.flip-vertical.short' },
 				kbd: '!v',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('flip-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('flip vertical')
@@ -811,20 +1010,29 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.flipShapes(selectedShapeIds, 'vertical')
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() &&
+						!mustGoBackToSelectToolFirst() &&
+						!!(twoSelected || onlyFlippableShapeSelected)
+					)
+				},
 			},
 			{
 				id: 'pack',
 				label: 'action.pack',
 				icon: 'pack',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('pack-shapes', { source })
 					editor.markHistoryStoppingPoint('pack')
 					const selectedShapeIds = editor.getSelectedShapeIds()
 					editor.packShapes(selectedShapeIds, editor.options.adjacentShapeMargin)
 					kickoutOccludedShapes(editor, selectedShapeIds)
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && threeStackableItems
 				},
 			},
 			{
@@ -835,14 +1043,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				icon: 'stack-vertical',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('stack-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('stack-vertical')
 					const selectedShapeIds = editor.getSelectedShapeIds()
 					editor.stackShapes(selectedShapeIds, 'vertical', 16)
 					kickoutOccludedShapes(editor, selectedShapeIds)
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && stackingEnabled
 				},
 			},
 			{
@@ -853,14 +1063,16 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				},
 				icon: 'stack-horizontal',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('stack-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('stack-horizontal')
 					const selectedShapeIds = editor.getSelectedShapeIds()
 					editor.stackShapes(selectedShapeIds, 'horizontal', 16)
 					kickoutOccludedShapes(editor, selectedShapeIds)
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && stackingEnabled
 				},
 			},
 			{
@@ -869,12 +1081,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: ']',
 				icon: 'bring-to-front',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('reorder-shapes', { operation: 'toFront', source })
 					editor.markHistoryStoppingPoint('bring to front')
 					editor.bringToFront(editor.getSelectedShapeIds())
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && reorderingEnabled
 				},
 			},
 			{
@@ -883,12 +1097,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'bring-forward',
 				kbd: '?]',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('reorder-shapes', { operation: 'forward', source })
 					editor.markHistoryStoppingPoint('bring forward')
 					editor.bringForward(editor.getSelectedShapeIds())
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && reorderingEnabled
 				},
 			},
 			{
@@ -897,12 +1113,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'send-backward',
 				kbd: '?[',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('reorder-shapes', { operation: 'backward', source })
 					editor.markHistoryStoppingPoint('send backward')
 					editor.sendBackward(editor.getSelectedShapeIds())
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && reorderingEnabled
 				},
 			},
 			{
@@ -911,12 +1129,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'send-to-back',
 				kbd: '[',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('reorder-shapes', { operation: 'toBack', source })
 					editor.markHistoryStoppingPoint('send to back')
 					editor.sendToBack(editor.getSelectedShapeIds())
+				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && reorderingEnabled
 				},
 			},
 			{
@@ -924,12 +1144,15 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				label: 'action.cut',
 				kbd: '$x',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					editor.markHistoryStoppingPoint('cut')
 					cut(source)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && !!oneSelected
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'copy',
@@ -937,17 +1160,21 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '$c',
 				readonlyOk: true,
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					copy(source)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && !!oneSelected
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'paste',
 				label: 'action.paste',
 				kbd: '$v',
 				onSelect(source) {
+					if (!this.enabled()) return
 					navigator.clipboard
 						?.read()
 						.then((clipboardItems) => {
@@ -965,6 +1192,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 							})
 						})
 				},
+				enabled() {
+					return showMenuPaste
+				},
+				disabledDescription: 'action.paste-disabled-description',
 			},
 			{
 				id: 'select-all',
@@ -972,28 +1203,34 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '$a',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					editor.run(() => {
-						if (mustGoBackToSelectToolFirst()) return
-
 						trackEvent('select-all-shapes', { source })
 
 						editor.markHistoryStoppingPoint('select all kbd')
 						editor.selectAll()
 					})
 				},
+				enabled() {
+					return !mustGoBackToSelectToolFirst() && pageHasShapes
+				},
+				disabledDescription: 'action.no-shapes-on-page',
 			},
 			{
 				id: 'select-none',
 				label: 'action.select-none',
 				readonlyOk: true,
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('select-none-shapes', { source })
 					editor.markHistoryStoppingPoint('select none')
 					editor.selectNone()
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && !!oneSelected
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'delete',
@@ -1001,21 +1238,27 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '⌫,del,backspace',
 				icon: 'trash',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('delete-shapes', { source })
 					editor.markHistoryStoppingPoint('delete')
 					editor.deleteShapes(editor.getSelectedShapeIds())
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() &&
+						!mustGoBackToSelectToolFirst() &&
+						!!(oneSelected && isInSelectState)
+					)
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'rotate-cw',
 				label: 'action.rotate-cw',
 				icon: 'rotate-cw',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('rotate-cw', { source })
 					editor.markHistoryStoppingPoint('rotate-cw')
@@ -1025,14 +1268,17 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.rotateShapesBy(selectedShapeIds, HALF_PI / 2 - (dontUseOffset ? 0 : offset))
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && rotateEnabled
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'rotate-ccw',
 				label: 'action.rotate-ccw',
 				icon: 'rotate-ccw',
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('rotate-ccw', { source })
 					editor.markHistoryStoppingPoint('rotate-ccw')
@@ -1042,6 +1288,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.rotateShapesBy(selectedShapeIds, offsetCloseToZero ? -(HALF_PI / 2) : -offset)
 					kickoutOccludedShapes(editor, selectedShapeIds)
 				},
+				enabled() {
+					return canApplySelectionAction() && !mustGoBackToSelectToolFirst() && rotateEnabled
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'zoom-in',
@@ -1053,6 +1303,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.zoomIn(undefined, {
 						animation: { duration: editor.options.animationMediumMs },
 					})
+				},
+				enabled() {
+					return true
 				},
 			},
 			{
@@ -1066,6 +1319,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						animation: { duration: editor.options.animationMediumMs },
 					})
 				},
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'zoom-to-100',
@@ -1074,10 +1330,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '!0',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('reset-zoom', { source })
 					editor.resetZoom(undefined, {
 						animation: { duration: editor.options.animationMediumMs },
 					})
+				},
+				enabled() {
+					return editor.getZoomLevel() !== 1
 				},
 			},
 			{
@@ -1086,8 +1346,12 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '!1',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('zoom-to-fit', { source })
 					editor.zoomToFit({ animation: { duration: editor.options.animationMediumMs } })
+				},
+				enabled() {
+					return editor.getCurrentPageShapeIds().size > 0
 				},
 			},
 			{
@@ -1096,12 +1360,19 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '!2',
 				readonlyOk: true,
 				onSelect(source) {
-					if (!canApplySelectionAction()) return
-					if (mustGoBackToSelectToolFirst()) return
+					if (!this.enabled()) return
 
 					trackEvent('zoom-to-selection', { source })
 					editor.zoomToSelection({ animation: { duration: editor.options.animationMediumMs } })
 				},
+				enabled() {
+					return (
+						canApplySelectionAction() &&
+						!mustGoBackToSelectToolFirst() &&
+						editor.getCurrentPageShapeIds().size > 0
+					)
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'toggle-snap-mode',
@@ -1114,6 +1385,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.user.updateUserPreferences({ isSnapMode: !editor.user.getIsSnapMode() })
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-dark-mode',
@@ -1131,6 +1405,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-wrap-mode',
@@ -1146,6 +1423,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-dynamic-size-mode',
@@ -1161,6 +1441,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-paste-at-cursor',
@@ -1176,6 +1459,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-reduce-motion',
@@ -1191,6 +1477,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-edge-scrolling',
@@ -1206,6 +1495,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-transparent',
@@ -1222,6 +1514,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-tool-lock',
@@ -1235,11 +1530,15 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.updateInstanceState({ isToolLocked: !editor.getInstanceState().isToolLocked })
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'unlock-all',
 				label: 'action.unlock-all',
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('unlock-all', { source })
 					const updates = [] as TLShapePartial[]
 					for (const shape of editor.getCurrentPageShapes()) {
@@ -1251,6 +1550,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.updateShapes(updates)
 					}
 				},
+				enabled() {
+					return unlockAllEnabled
+				},
+				disabledDescription: 'action.no-shapes-on-page',
 			},
 			{
 				id: 'toggle-focus-mode',
@@ -1273,6 +1576,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						})
 					})
 				},
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-grid',
@@ -1287,6 +1593,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					editor.updateInstanceState({ isGridMode: !editor.getInstanceState().isGridMode })
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'toggle-debug-mode',
@@ -1302,6 +1611,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 				},
 				checkbox: true,
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'print',
@@ -1309,9 +1621,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				kbd: '$p',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('print', { source })
 					printSelectionOrPages()
 				},
+				enabled() {
+					return pageHasShapes
+				},
+				disabledDescription: 'action.no-shapes-on-page',
 			},
 			{
 				id: 'exit-pen-mode',
@@ -1319,9 +1636,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'cross-2',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('exit-pen-mode', { source })
 					editor.updateInstanceState({ isPenMode: false })
 				},
+				enabled() {
+					return editor.getInstanceState().isPenMode
+				},
+				disabledDescription: 'action.exit-pen-mode-disabled-description',
 			},
 			{
 				id: 'stop-following',
@@ -1329,9 +1651,14 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'cross-2',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
 					trackEvent('stop-following', { source })
 					editor.stopFollowingUser()
 				},
+				enabled() {
+					return isFollowingUser
+				},
+				disabledDescription: 'action.stop-following-disabled-description',
 			},
 			{
 				id: 'back-to-content',
@@ -1339,13 +1666,18 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				icon: 'arrow-left',
 				readonlyOk: true,
 				onSelect(source) {
+					if (!this.enabled()) return
+
 					trackEvent('zoom-to-content', { source })
-					const bounds = editor.getSelectionPageBounds() ?? editor.getCurrentPageBounds()
-					if (!bounds) return
+					const bounds = editor.getSelectionPageBounds() ?? editor.getCurrentPageBounds()!
 					editor.zoomToBounds(bounds, {
 						targetZoom: Math.min(1, editor.getZoomLevel()),
 						animation: { duration: 220 },
 					})
+				},
+				enabled() {
+					const bounds = editor.getSelectionPageBounds() ?? editor.getCurrentPageBounds()
+					return !!bounds && backToContentEnabled
 				},
 			},
 			{
@@ -1353,15 +1685,24 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				label: 'action.toggle-lock',
 				kbd: '!l',
 				onSelect(source) {
+					if (!this.enabled()) return
 					editor.markHistoryStoppingPoint('locking')
 					trackEvent('toggle-lock', { source })
 					editor.toggleLock(editor.getSelectedShapeIds())
 				},
+				enabled() {
+					return !!oneSelected
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'move-to-new-page',
-				label: 'context.pages.new-page',
+				label: {
+					default: 'context.pages.new-page',
+					'command-bar': 'command-bar.move-to-new-page',
+				},
 				onSelect(source) {
+					if (!this.enabled()) return
 					const newPageId = PageRecordType.createId()
 					const ids = editor.getSelectedShapeIds()
 					editor.run(() => {
@@ -1371,6 +1712,10 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 					trackEvent('move-to-new-page', { source })
 				},
+				enabled() {
+					return !!(oneSelected && editor.options.maxPages > 1)
+				},
+				disabledDescription: 'action.no-shapes-selected',
 			},
 			{
 				id: 'select-white-color',
@@ -1386,6 +1731,9 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.setStyleForNextShapes(style, 'white')
 					})
 					trackEvent('set-style', { source, id: style.id, value: 'white' })
+				},
+				enabled() {
+					return true
 				},
 			},
 			{
@@ -1403,14 +1751,17 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 					})
 					trackEvent('set-style', { source, id: style.id, value: 'fill' })
 				},
+				enabled() {
+					return true
+				},
 			},
 			{
 				id: 'flatten-to-image',
 				label: 'action.flatten-to-image',
 				kbd: '!f',
-				onSelect: async (source) => {
+				onSelect: async function (source) {
+					if (!this.enabled()) return
 					const ids = editor.getSelectedShapeIds()
-					if (ids.length === 0) return
 
 					editor.markHistoryStoppingPoint('flattening to image')
 					trackEvent('flatten-to-image', { source })
@@ -1425,6 +1776,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.setSelectedShapes(newShapeIds)
 					}
 				},
+				enabled() {
+					const ids = editor.getSelectedShapeIds()
+					return ids.length > 0 && flattenToImagesEnabled
+				},
+				disabledDescription: 'action.flatten-to-image-disabled-description',
 			},
 		]
 
@@ -1435,6 +1791,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 				readonlyOk: true,
 				kbd: '/',
 				onSelect(source: any) {
+					if (!this.enabled()) return
 					trackEvent('open-cursor-chat', { source })
 
 					// Don't open cursor chat if we're on a touch device
@@ -1447,8 +1804,12 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 						editor.updateInstanceState({ isChatting: true })
 					})
 				},
+				enabled() {
+					return cursorChatEnabled
+				},
 			})
 		}
+		actionItems.map((a) => (a.onSelect = a.onSelect.bind(a)))
 
 		const actions = makeActions(actionItems)
 
@@ -1458,24 +1819,49 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 		return actions
 	}, [
+		showCollaborationUi,
+		overrides,
 		editor,
 		trackEvent,
-		overrides,
 		addDialog,
-		addToast,
+		editLinkEnabled,
 		insertMedia,
+		undoEnabled,
+		redoEnabled,
 		exportAs,
+		defaultDocumentName,
+		pageHasShapes,
 		copyAs,
+		convertToBookmarkEnabled,
+		getEmbedDefinition,
+		convertToEmbedEnabled,
+		oneSelected,
+		isInSelectState,
+		allowUngroup,
+		allowGroup,
+		twoSelected,
+		removeFrameEnabled,
+		fitFrameToContentEnabled,
+		alignEnabled,
+		distributeEnabled,
+		onlyFlippableShapeSelected,
+		threeStackableItems,
+		stackingEnabled,
+		reorderingEnabled,
 		cut,
 		copy,
 		paste,
+		addToast,
+		msg,
+		rotateEnabled,
+		unlockAllEnabled,
 		clearDialogs,
 		clearToasts,
 		printSelectionOrPages,
-		msg,
-		defaultDocumentName,
-		showCollaborationUi,
-		getEmbedDefinition,
+		isFollowingUser,
+		backToContentEnabled,
+		flattenToImagesEnabled,
+		cursorChatEnabled,
 	])
 
 	return <ActionsContext.Provider value={asActions(actions)}>{children}</ActionsContext.Provider>

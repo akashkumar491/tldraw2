@@ -110,6 +110,7 @@ const TldrawUiContent = React.memo(function TldrawUI() {
 		HelperButtons,
 		DebugPanel,
 		CursorChatBubble,
+		CommandBar,
 	} = useTldrawUiComponents()
 
 	useKeyboardShortcuts()
@@ -161,6 +162,7 @@ const TldrawUiContent = React.memo(function TldrawUI() {
 					</div>
 				</>
 			)}
+			{CommandBar && <CommandBar />}
 			<Toasts />
 			<Dialogs />
 			<ToastViewport />

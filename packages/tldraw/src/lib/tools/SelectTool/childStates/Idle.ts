@@ -236,7 +236,7 @@ export class Idle extends StateNode {
 				}
 
 				if (!this.editor.inputs.shiftKey) {
-					this.handleDoubleClickOnCanvas(info)
+					this.handleDoubleClickOnCanvas()
 				}
 				break
 			}
@@ -319,7 +319,7 @@ export class Idle extends StateNode {
 					// If the shape's double click handler has not created a change,
 					// and if the shape cannot edit, then create a text shape and
 					// begin editing the text shape
-					this.handleDoubleClickOnCanvas(info)
+					this.handleDoubleClickOnCanvas()
 				}
 				break
 			}
@@ -533,8 +533,7 @@ export class Idle extends StateNode {
 	) {
 		if (this.editor.isShapeOrAncestorLocked(shape) && shape.type !== 'embed') return
 		this.editor.markHistoryStoppingPoint('editing shape')
-		startEditingShapeWithLabel(this.editor, shape, shouldSelectAll)
-		this.parent.transition('editing_shape', info)
+		startEditingShapeWithLabel(this.editor, shape, shouldSelectAll) // will transition to 'select.editing_shape'
 	}
 
 	isDarwin = window.navigator.userAgent.toLowerCase().indexOf('mac') > -1
@@ -561,7 +560,7 @@ export class Idle extends StateNode {
 		return false
 	}
 
-	handleDoubleClickOnCanvas(info: TLClickEventInfo) {
+	handleDoubleClickOnCanvas() {
 		// Create text shape and transition to editing_shape
 		if (this.editor.getInstanceState().isReadonly) return
 
@@ -594,9 +593,8 @@ export class Idle extends StateNode {
 			}
 		}
 
-		this.editor.setEditingShape(id)
 		this.editor.select(id)
-		this.parent.transition('editing_shape', info)
+		this.editor.setEditingShape(id) // will transition to 'select.editing_shape'
 	}
 
 	private nudgeSelectedShapes(ephemeral = false) {

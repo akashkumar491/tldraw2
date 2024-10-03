@@ -80,6 +80,7 @@ export abstract class StateNode implements Partial<TLEventHandlers> {
 					children().map((Ctor) => [Ctor.id, new Ctor(this.editor, this)])
 				)
 				this._current.set(this.children[this.initial])
+				this.children[this.initial]._isActive.set(true)
 			}
 		}
 		this.isLockable = isLockable
@@ -129,6 +130,42 @@ export abstract class StateNode implements Partial<TLEventHandlers> {
 	}
 	private _isActive: Atom<boolean>
 
+	getDescendant<T extends StateNode>(path: string): T | undefined {
+		const ids = path.split('.').reverse()
+		let state = this as any
+		while (ids.length > 0) {
+			const id = ids.pop()
+			if (!id) return state as T
+			const childState = state.children?.[id]
+			if (!childState) return undefined
+			state = childState
+		}
+		return state as T
+	}
+
+	private exitBranch(id: string, info: any = {}) {
+		let nextExitingParent = this as StateNode | undefined
+		while (nextExitingParent) {
+			nextExitingParent.exit(info, id)
+			const nextExitingChild = nextExitingParent.getCurrent()
+			nextExitingParent = nextExitingChild
+		}
+	}
+
+	private enterBranch(id: string, info: any = {}) {
+		let nextEnteringParent = this as StateNode | undefined
+		while (nextEnteringParent) {
+			nextEnteringParent.enter(info, id)
+			if (nextEnteringParent.initial && nextEnteringParent.children) {
+				const nextEnteringChild = nextEnteringParent.children[nextEnteringParent.initial]
+				nextEnteringParent._current.set(nextEnteringChild)
+				nextEnteringParent = nextEnteringChild
+			} else {
+				break
+			}
+		}
+	}
+
 	/**
 	 * Transition to a new active child state node.
 	 *
@@ -136,20 +173,34 @@ export abstract class StateNode implements Partial<TLEventHandlers> {
 	 * ```ts
 	 * parentState.transition('childStateA')
 	 * parentState.transition('childStateB', { myData: 4 })
+	 * parentState.transition('childStateA.childStateAB.childStateABC')
 	 *```
 	 *
-	 * @param id - The id of the child state node to transition to.
+	 * @param path - The path of child state nodes to transition to.
 	 * @param info - Any data to pass to the `onEnter` and `onExit` handlers.
 	 *
 	 * @public
 	 */
-	transition(id: string, info: any = {}) {
-		const path = id.split('.')
+	transition(path: string, info: any = {}) {
+		const pathIds = path.split('.')
 
 		let currState = this as StateNode
 
-		for (let i = 0; i < path.length; i++) {
-			const id = path[i]
+		let currentPath = this.getPath().split('root.')[1]
+
+		if (currentPath === path) {
+			return
+		}
+
+		if (currentPath?.includes(path)) {
+			this.exitBranch('self', info)
+			this.enterBranch('self', info)
+		}
+
+		currentPath = this.getPath().split('root.')[1]
+
+		for (let i = 0; i < pathIds.length; i++) {
+			const id = pathIds[i]
 			const prevChildState = currState.getCurrent()
 			const nextChildState = currState.children?.[id]
 
@@ -157,11 +208,60 @@ export abstract class StateNode implements Partial<TLEventHandlers> {
 				throw Error(`${currState.id} - no child state exists with the id ${id}.`)
 			}
 
-			if (prevChildState?.id !== nextChildState.id) {
-				prevChildState?.exit(info, id)
-				currState._current.set(nextChildState)
+			if (!prevChildState) {
+				throw Error(
+					`${currState.id} - no current child state exists, should at least be in the initial state.`
+				)
+			}
+
+			// If the previous child state is active and we're transitioning to a new child state,
+			// exit the previous child state and all of its children
+			if (prevChildState.getIsActive()) {
+				prevChildState.exitBranch(id, info)
+			}
+
+			currState._current.set(nextChildState)
+			if (!nextChildState.getIsActive()) {
 				nextChildState.enter(info, prevChildState?.id || 'initial')
-				if (!nextChildState.getIsActive()) break
+			}
+
+			// Since the `enter` will call `onEnter`, if that `onEnter` created a transition, we need to bail
+			if (!nextChildState.getIsActive()) {
+				currState = nextChildState
+				break
+			}
+
+			currState = nextChildState
+		}
+
+		// If the new state has children, transition to the initial child state
+		// and repeat all the way down the tree, entering each initial child state
+		while (currState.children && currState.initial) {
+			const prevChildState = currState.getCurrent()
+			const nextChildState = currState.children[currState.initial]
+
+			if (!prevChildState) {
+				throw Error(
+					`${currState.id} - no current child state exists, should at least be in the initial state.`
+				)
+			}
+
+			if (prevChildState.id !== nextChildState.id || !nextChildState.getIsActive()) {
+				// If the previous child state is active and we're transitioning to a new child state,
+				// exit the previous child state and all of its children
+				if (prevChildState.getIsActive()) {
+					prevChildState.exitBranch(nextChildState.id, info)
+				}
+
+				// Now enter the new child state and repeat the process
+				currState._current.set(nextChildState)
+				nextChildState.enter(info, 'initial')
+
+				// Since the `enter` will call `onEnter`, if that `onEnter` created a transition, we need to bail
+				if (!currState.getIsActive()) {
+					currState = nextChildState
+					break
+				}
 			}
 
 			currState = nextChildState
@@ -184,7 +284,17 @@ export abstract class StateNode implements Partial<TLEventHandlers> {
 		}
 	}
 
-	// todo: move this logic into transition
+	_started = false
+	start() {
+		this._isActive.set(true)
+		this.onEnter?.({}, 'initial')
+		if (this.children && this.initial) {
+			this._current.set(this.children[this.initial])
+			this.children[this.initial].start()
+		}
+		this._started = true
+	}
+
 	enter(info: any, from: string) {
 		if (debugFlags.measurePerformance.get() && STATE_NODES_TO_MEASURE.includes(this.id)) {
 			this.performanceTracker.start(this.id)
@@ -192,25 +302,14 @@ export abstract class StateNode implements Partial<TLEventHandlers> {
 
 		this._isActive.set(true)
 		this.onEnter?.(info, from)
-
-		if (this.children && this.initial && this.getIsActive()) {
-			const initial = this.children[this.initial]
-			this._current.set(initial)
-			initial.enter(info, from)
-		}
 	}
 
-	// todo: move this logic into transition
 	exit(info: any, from: string) {
 		if (debugFlags.measurePerformance.get() && this.performanceTracker.isStarted()) {
 			this.performanceTracker.stop()
 		}
 		this._isActive.set(false)
 		this.onExit?.(info, from)
-
-		if (!this.getIsActive()) {
-			this.getCurrent()?.exit(info, from)
-		}
 	}
 
 	/**

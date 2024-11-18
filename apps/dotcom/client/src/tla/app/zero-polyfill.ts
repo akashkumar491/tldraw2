@@ -8,8 +8,8 @@ import {
 	ZRowUpdate,
 	ZServerSentMessage,
 } from '@tldraw/dotcom-shared'
-import { ClientWebSocketAdapter } from '@tldraw/sync-core'
-import { Signal, computed, react, transact, uniqueId } from 'tldraw'
+import { ClientWebSocketAdapter, TLPersistentClientSocketStatus } from '@tldraw/sync-core'
+import { Signal, atom, computed, react, transact, uniqueId } from 'tldraw'
 
 export class Zero {
 	socket: ClientWebSocketAdapter
@@ -17,6 +17,8 @@ export class Zero {
 	pendingUpdates: ZRowUpdate[] = []
 	timeout: NodeJS.Timeout | undefined = undefined
 	currentMutationId = uniqueId()
+
+	private networkStatus = atom<TLPersistentClientSocketStatus>('newtwork status', 'offline')
 
 	constructor(
 		private opts: { getUri(): Promise<string>; onMutationRejected(errorCode: ZErrorCode): void }
@@ -46,6 +48,12 @@ export class Zero {
 				}
 			}
 		})
+		this.socket.onStatusChange((params) => {
+			this.networkStatus.set(params.status)
+			if (params.status === 'online') {
+				this.sendPendingUpdates()
+			}
+		})
 	}
 
 	dispose() {
@@ -54,6 +62,10 @@ export class Zero {
 			this.sendPendingUpdates()
 		}
 		this.socket.close()
+	}
+
+	getIsOffline() {
+		return this.networkStatus.get() === 'offline'
 	}
 
 	// eslint-disable-next-line local/prefer-class-methods
@@ -205,7 +217,12 @@ export class Zero {
 	}, this.____mutators)
 
 	private sendPendingUpdates() {
-		if (this.socket.isDisposed) return
+		if (
+			this.socket.isDisposed ||
+			this.socket.connectionStatus === 'offline' ||
+			this.pendingUpdates.length === 0
+		)
+			return
 
 		this.socket.sendMessage({
 			type: 'mutate',

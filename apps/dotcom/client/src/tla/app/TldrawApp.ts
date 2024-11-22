@@ -193,6 +193,7 @@ export class TldrawApp {
 					...existing,
 					isLoaded: true,
 				})
+				continue
 			}
 			if (existing) {
 				nextRecentFileOrdering.push(existing)

@@ -37,6 +37,7 @@ export interface RecentFile {
 	date: number
 	isLoaded: boolean
 }
+
 let appId = 0
 
 export class TldrawApp {

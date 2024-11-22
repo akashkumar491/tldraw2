@@ -34,6 +34,7 @@ import {
 	TLImageAsset,
 	TLInstance,
 	TLInstancePageState,
+	TLNoteShape,
 	TLPOINTER_ID,
 	TLPage,
 	TLPageId,
@@ -161,6 +162,7 @@ import {
 	TLCameraMoveOptions,
 	TLCameraOptions,
 	TLImageExportOptions,
+	TLTextOptions,
 } from './types/misc-types'
 import { TLResizeHandle } from './types/selection-types'
 
@@ -221,6 +223,7 @@ export interface TLEditorOptions {
 	 * Options for the editor's camera.
 	 */
 	cameraOptions?: Partial<TLCameraOptions>
+	textOptions?: Partial<TLTextOptions>
 	options?: Partial<TldrawOptions>
 	licenseKey?: string
 	/**
@@ -259,6 +262,7 @@ export class Editor extends EventEmitter<TLEventMap> {
 		tools,
 		getContainer,
 		cameraOptions,
+		textOptions,
 		initialState,
 		autoFocus,
 		inferDarkMode,
@@ -286,6 +290,8 @@ export class Editor extends EventEmitter<TLEventMap> {
 		this.disposables.add(this.timers.dispose)
 
 		this._cameraOptions.set({ ...DEFAULT_CAMERA_OPTIONS, ...cameraOptions })
+
+		this._textOptions.set({ ...textOptions })
 
 		this.user = new UserPreferencesManager(user ?? createTLUser(), inferDarkMode ?? false)
 		this.disposables.add(() => this.user.dispose())
@@ -2029,6 +2035,33 @@ export class Editor extends EventEmitter<TLEventMap> {
 		return this
 	}
 
+	private _currentTextEditor = atom('text editor', null as any)
+
+	/**
+	 * The current editing shape's text editor.
+	 *
+	 * @public
+	 */
+	@computed getEditingShapeTextEditor(): any {
+		return this._currentTextEditor.get()
+	}
+
+	/**
+	 * Set the current editing shape's text editor.
+	 *
+	 * @example
+	 * ```ts
+	 * editor.setEditingShapeTextEditor(richTextEditorView)
+	 * ```
+	 *
+	 * @param textEditor - The text editor to set as the current editing shape's text editor.
+	 *
+	 * @public
+	 */
+	setEditingShapeTextEditor(textEditor: any) {
+		this._currentTextEditor.set(textEditor)
+	}
+
 	// Hovered
 
 	/**
@@ -2231,6 +2264,21 @@ export class Editor extends EventEmitter<TLEventMap> {
 			)
 		}
 		return this
+	}
+
+	private _textOptions = atom('text options', {} as TLTextOptions)
+
+	/**
+	 * Get the current text options.
+	 *
+	 * @example
+	 * ```ts
+	 * editor.getTextOptions()
+	 * ```
+	 *
+	 *  @public */
+	getTextOptions() {
+		return this._textOptions.get()
 	}
 
 	/* --------------------- Camera --------------------- */
@@ -4726,9 +4774,10 @@ export class Editor extends EventEmitter<TLEventMap> {
 			// Check labels first
 			if (
 				this.isShapeOfType<TLArrowShape>(shape, 'arrow') ||
+				this.isShapeOfType<TLNoteShape>(shape, 'note') ||
 				(this.isShapeOfType<TLGeoShape>(shape, 'geo') && shape.props.fill === 'none')
 			) {
-				if (shape.props.text.trim()) {
+				if (shape.props.text.trim() || (shape as TLGeoShape).props.richText) {
 					// let's check whether the shape has a label and check that
 					for (const childGeometry of (geometry as Group2d).children) {
 						if (childGeometry.isLabel && childGeometry.isPointInBounds(pointInShapeSpace)) {

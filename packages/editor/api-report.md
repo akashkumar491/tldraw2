@@ -13,6 +13,7 @@ import { ComponentType } from 'react';
 import { Computed } from '@tldraw/state';
 import { computed } from '@tldraw/state';
 import { Dispatch } from 'react';
+import { EditorProviderProps } from '@tiptap/react';
 import { EffectScheduler } from '@tldraw/state';
 import { EMPTY_ARRAY } from '@tldraw/state';
 import EventEmitter from 'eventemitter3';
@@ -32,7 +33,6 @@ import { ReactElement } from 'react';
 import { ReactNode } from 'react';
 import { RecordProps } from '@tldraw/tlschema';
 import { RecordsDiff } from '@tldraw/store';
-import { RefObject } from 'react';
 import { SerializedSchema } from '@tldraw/store';
 import { SerializedStore } from '@tldraw/store';
 import { SetStateAction } from 'react';
@@ -812,7 +812,7 @@ export class EdgeScrollManager {
 
 // @public (undocumented)
 export class Editor extends EventEmitter<TLEventMap> {
-    constructor({ store, user, shapeUtils, bindingUtils, tools, getContainer, cameraOptions, initialState, autoFocus, inferDarkMode, options, isShapeHidden, }: TLEditorOptions);
+    constructor({ store, user, shapeUtils, bindingUtils, tools, getContainer, cameraOptions, textOptions, initialState, autoFocus, inferDarkMode, options, isShapeHidden, }: TLEditorOptions);
     // @deprecated (undocumented)
     addOpenMenu(id: string): this;
     alignShapes(shapes: TLShape[] | TLShapeId[], operation: 'bottom' | 'center-horizontal' | 'center-vertical' | 'left' | 'right' | 'top'): this;
@@ -995,6 +995,7 @@ export class Editor extends EventEmitter<TLEventMap> {
     getDroppingOverShape(point: VecLike, droppingShapes?: TLShape[]): TLUnknownShape | undefined;
     getEditingShape(): TLShape | undefined;
     getEditingShapeId(): null | TLShapeId;
+    getEditingShapeTextEditor(): any;
     getErasingShapeIds(): TLShapeId[];
     getErasingShapes(): NonNullable<TLShape | undefined>[];
     getFocusedGroup(): TLShape | undefined;
@@ -1096,6 +1097,7 @@ export class Editor extends EventEmitter<TLEventMap> {
         width: number;
     } | undefined>;
     getTemporaryAssetPreview(assetId: TLAssetId): string | undefined;
+    getTextOptions(): TLTextOptions;
     // @internal (undocumented)
     getUnorderedRenderingShapes(useEditorState: boolean): TLRenderingShape[];
     getViewportPageBounds(): Box;
@@ -1232,6 +1234,7 @@ export class Editor extends EventEmitter<TLEventMap> {
     setCurrentTool(id: string, info?: {}): this;
     setCursor(cursor: Partial<TLCursor>): this;
     setEditingShape(shape: null | TLShape | TLShapeId): this;
+    setEditingShapeTextEditor(textEditor: any): void;
     setErasingShapes(shapes: TLShape[] | TLShapeId[]): this;
     setFocusedGroup(shape: null | TLGroupShape | TLShapeId): this;
     setHintingShapes(shapes: TLShape[] | TLShapeId[]): this;
@@ -2497,6 +2500,7 @@ export class TextManager {
         lineHeight: number;
         minWidth?: null | number;
         padding: string;
+        renderMethod?(): Node | string;
     }): BoxModel & {
         scrollWidth: number;
     };
@@ -2724,6 +2728,7 @@ export interface TldrawEditorBaseProps {
     onMount?: TLOnMountHandler;
     options?: Partial<TldrawOptions>;
     shapeUtils?: readonly TLAnyShapeUtilConstructor[];
+    textOptions?: Partial<TLTextOptions>;
     tools?: readonly TLStateNodeConstructor[];
     user?: TLUser;
 }
@@ -2900,6 +2905,8 @@ export interface TLEditorOptions {
     options?: Partial<TldrawOptions>;
     shapeUtils: readonly TLAnyShapeUtilConstructor[];
     store: TLStore;
+    // (undocumented)
+    textOptions?: Partial<TLTextOptions>;
     tools: readonly TLStateNodeConstructor[];
     user?: TLUser;
 }
@@ -3564,6 +3571,12 @@ export type TLStoreWithStatus = {
 export type TLSvgOptions = TLImageExportOptions;
 
 // @public (undocumented)
+export interface TLTextOptions {
+    // (undocumented)
+    tipTapConfig?: EditorProviderProps;
+}
+
+// @public (undocumented)
 export type TLTickEvent = (info: TLTickEventInfo) => void;
 
 // @public (undocumented)
@@ -3699,7 +3712,10 @@ export function useMaybeEditor(): Editor | null;
 export function useOnMount(onMount?: TLOnMountHandler): void;
 
 // @public (undocumented)
-export function usePassThroughWheelEvents(ref: RefObject<HTMLElement>): void;
+export function usePassThroughMouseOverEvents(elm: HTMLElement | null): void;
+
+// @public (undocumented)
+export function usePassThroughWheelEvents(elm: HTMLElement | null): void;
 
 // @internal (undocumented)
 export function usePeerIds(): string[];

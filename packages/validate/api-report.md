@@ -184,6 +184,7 @@ declare namespace T {
         boolean,
         bigint,
         array,
+        tipTapDoc,
         unknownObject,
         ExtractRequiredKeys,
         ExtractOptionalKeys,
@@ -195,6 +196,9 @@ declare namespace T {
     }
 }
 export { T }
+
+// @public
+const tipTapDoc: Validator<any>;
 
 // @public (undocumented)
 type TypeOf<V extends Validatable<any>> = V extends Validatable<infer T> ? T : never;

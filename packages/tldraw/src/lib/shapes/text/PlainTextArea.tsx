@@ -1,18 +1,8 @@
 import { preventDefault, stopEventPropagation } from '@tldraw/editor'
 import { forwardRef } from 'react'
+import { TextAreaProps } from './RichTextArea'
 
-interface TextAreaProps {
-	isEditing: boolean
-	text: string
-	handleFocus(): void
-	handleBlur(): void
-	handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>): void
-	handleChange(e: React.ChangeEvent<HTMLTextAreaElement>): void
-	handleInputPointerDown(e: React.PointerEvent<HTMLTextAreaElement>): void
-	handleDoubleClick(e: any): any
-}
-
-export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
+export const PlainTextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
 	{
 		isEditing,
 		text,
@@ -25,6 +15,10 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
 	},
 	ref
 ) {
+	const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		handleChange({ plaintext: e.target.value })
+	}
+
 	return (
 		<textarea
 			ref={ref}
@@ -42,8 +36,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
 			dir="auto"
 			defaultValue={text}
 			onFocus={handleFocus}
-			onChange={handleChange}
-			onKeyDown={handleKeyDown}
+			onChange={onChange}
+			onKeyDown={(e) => handleKeyDown(e.nativeEvent)}
 			onBlur={handleBlur}
 			onTouchEnd={stopEventPropagation}
 			onContextMenu={isEditing ? stopEventPropagation : undefined}

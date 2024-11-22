@@ -242,12 +242,26 @@ function TlaSidebarFileLink({ item, index }: { item: RecentFile; index: number }
 	const isActive = fileSlug === fileId
 	const [isRenaming, setIsRenaming] = useState(false)
 	const trackEvent = useTldrawAppUiEvents()
+	const ref = useRef<HTMLDivElement>(null)
 
 	const handleRenameAction = () => setIsRenaming(true)
 
 	const handleRenameClose = () => setIsRenaming(false)
 
 	const app = useApp()
+
+	const results = useValue(
+		'recent user files',
+		() => {
+			return app.getUserRecentFiles()
+		},
+		[app]
+	)
+	useEffect(() => {
+		if (isActive && results.length > 0) {
+			ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+		}
+	}, [isActive, results.length])
 
 	if (isRenaming) {
 		return <TlaRenameInline source="sidebar" fileId={fileId} onClose={handleRenameClose} />
@@ -260,6 +274,7 @@ function TlaSidebarFileLink({ item, index }: { item: RecentFile; index: number }
 			data-element="file-link"
 			data-testid={`tla-file-link-${index}`}
 			onDoubleClick={handleRenameAction}
+			ref={ref}
 		>
 			<div className={styles.linkContent}>
 				<div

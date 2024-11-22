@@ -2,6 +2,7 @@ import classNames from 'classnames'
 import { ReactElement, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { TldrawUiInput, preventDefault, useValue } from 'tldraw'
+import { RecentFile } from '../../app/TldrawApp'
 import { F, defineMessages, useIntl } from '../../app/i18n'
 import { useApp } from '../../hooks/useAppState'
 import { useIsFileOwner } from '../../hooks/useIsFileOwner'
@@ -253,6 +254,8 @@ function TlaSidebarFileLink({ item, index }: { item: RecentFile; index: number }
 		return <TlaRenameInline source="sidebar" fileId={fileId} onClose={handleRenameClose} />
 	}
 
+	if (!item.isLoaded) return null
+
 	return (
 		<div
 			className={classNames(styles.link, styles.hoverable)}
@@ -415,9 +418,4 @@ export function TlaSidebarToggleMobile() {
 			<TlaIcon icon="sidebar" />
 		</button>
 	)
-}
-
-interface RecentFile {
-	fileId: string
-	date: number
 }

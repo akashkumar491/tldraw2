@@ -32,6 +32,11 @@ export const PUBLISH_ENDPOINT = `/api/app/publish`
 export const UNPUBLISH_ENDPOINT = `/api/app/unpublish`
 export const FILE_ENDPOINT = `/api/app/file`
 
+export interface RecentFile {
+	fileId: string
+	date: number
+	isLoaded: boolean
+}
 let appId = 0
 
 export class TldrawApp {
@@ -166,7 +171,7 @@ export class TldrawApp {
 		return this.fileStates$.get()
 	}
 
-	lastRecentFileOrdering = null as null | Array<{ fileId: string; date: number }>
+	lastRecentFileOrdering = null as null | RecentFile[]
 
 	@computed
 	getUserRecentFiles() {
@@ -178,17 +183,25 @@ export class TldrawApp {
 		const nextRecentFileOrdering = []
 
 		for (const fileId of myFileIds) {
+			const file = myFiles[fileId]
+			const state = myStates[fileId]
 			const existing = this.lastRecentFileOrdering?.find((f) => f.fileId === fileId)
+			// File was not loaded before, but it is now
+			if (file && existing && !existing.isLoaded) {
+				nextRecentFileOrdering.push({
+					...existing,
+					isLoaded: true,
+				})
+			}
 			if (existing) {
 				nextRecentFileOrdering.push(existing)
 				continue
 			}
-			const file = myFiles[fileId]
-			const state = myStates[fileId]
 
 			nextRecentFileOrdering.push({
 				fileId,
 				date: state?.lastEditAt ?? state?.firstVisitAt ?? file?.createdAt ?? 0,
+				isLoaded: !!file,
 			})
 		}
 

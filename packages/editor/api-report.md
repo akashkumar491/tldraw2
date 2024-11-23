@@ -2476,6 +2476,10 @@ export class TextManager {
     // (undocumented)
     baseElm: HTMLDivElement;
     // (undocumented)
+    debug: boolean;
+    // (undocumented)
+    dispose(): void;
+    // (undocumented)
     editor: Editor;
     measureElementTextNodeSpans(element: HTMLElement, { shouldTruncateToFirstLine }?: {
         shouldTruncateToFirstLine?: boolean;
@@ -2504,6 +2508,8 @@ export class TextManager {
         box: BoxModel;
         text: string;
     }[];
+    // (undocumented)
+    prevElm?: HTMLDivElement;
 }
 
 // @public (undocumented)
